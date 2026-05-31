@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { searchMedicine, searchMedicineByName, createSale, getSales } from '../api';
 import toast from 'react-hot-toast';
-import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle, Printer } from 'lucide-react';
 
 export default function Sales() {
   const [tab, setTab] = useState('pos');
@@ -341,15 +341,182 @@ function POS() {
       )}
 
       {receiptData && createPortal(
-        <ReceiptModal data={receiptData} onClose={() => setReceiptData(null)} />,
+        <ReceiptModal data={receiptData} onClose={() => setReceiptData(null)} successMode={true} />,
         document.body
       )}
     </div>
   );
 }
 
-function ReceiptModal({ data, onClose }) {
-  const payLabel = { cash:'نقدي 💵', card:'كارت 💳', wallet:'محفظة إلكترونية 📱', insurance:'تأمين 🏥' };
+const PRINT_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    direction: rtl;
+    background: #fff;
+    color: #111;
+    width: 80mm;
+    margin: 0 auto;
+    padding: 8mm 6mm;
+    font-size: 12px;
+  }
+  .r-store {
+    text-align: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #111;
+  }
+  .r-store-name {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .r-store-sub {
+    font-size: 10px;
+    color: #555;
+    line-height: 1.6;
+  }
+  .r-meta {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #aaa;
+  }
+  .r-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    line-height: 2;
+    color: #333;
+  }
+  .r-meta-row span:last-child { font-weight: 700; color: #000; }
+  .r-invoice-no {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+  }
+  thead tr {
+    border-top: 1px solid #111;
+    border-bottom: 1px solid #111;
+  }
+  th {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 5px 2px;
+    text-align: right;
+    color: #000;
+  }
+  th.num { text-align: center; }
+  th.price { text-align: left; }
+  td {
+    font-size: 11px;
+    padding: 6px 2px;
+    border-bottom: 1px dashed #ddd;
+    vertical-align: middle;
+  }
+  td.num { text-align: center; color: #444; }
+  td.price { text-align: left; font-weight: 700; }
+  .r-medicine-name { font-weight: 700; font-size: 12px; }
+  .r-medicine-generic { font-size: 10px; color: #777; margin-top: 1px; }
+  .r-subtotals {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed #aaa;
+  }
+  .r-subtotals .r-meta-row { font-size: 11px; }
+  .r-total-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 2px solid #111;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .r-footer {
+    text-align: center;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed #aaa;
+    font-size: 10px;
+    color: #666;
+    line-height: 1.8;
+  }
+  @media print {
+    body { width: 100%; padding: 4mm; }
+    @page { margin: 0; size: 80mm auto; }
+  }
+`;
+
+function buildReceiptHTML(data) {
+  const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة الكترونية', insurance:'تأمين' };
+  const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
+  const calcItemTotal = (item) => {
+    let qty = item.qty;
+    if (item.quantityType === 'strip' && item.stripCount) qty = item.qty / item.stripCount;
+    if (item.quantityType === 'pill' && item.pillCount) qty = item.qty / item.pillCount;
+    return item.sellingPrice * qty;
+  };
+  const items = data.items || [];
+  const itemsHTML = items.map(item => `
+    <tr>
+      <td>
+        <div class="r-medicine-name">${item.name}</div>
+        ${item.genericName ? `<div class="r-medicine-generic">${item.genericName}</div>` : ''}
+      </td>
+      <td class="num">${item.qty} ${typeLabel[item.quantityType] || item.quantityType}</td>
+      <td class="price">${calcItemTotal(item).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="r-store">
+      <div class="r-store-name">الصيدلية</div>
+      <div class="r-store-sub">فاتورة مبيعات</div>
+    </div>
+    ${data.id ? `<div class="r-invoice-no">رقم الفاتورة: ${data.id.slice(0,8).toUpperCase()}</div>` : ''}
+    <div class="r-meta">
+      <div class="r-meta-row"><span>التاريخ</span><span>${new Date(data.ts).toLocaleDateString('ar-EG')}</span></div>
+      <div class="r-meta-row"><span>الوقت</span><span>${new Date(data.ts).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span></div>
+      ${data.cashierName ? `<div class="r-meta-row"><span>الكاشير</span><span>${data.cashierName}</span></div>` : ''}
+      <div class="r-meta-row"><span>طريقة الدفع</span><span>${payLabel[data.paymentMethod] || data.paymentMethod}</span></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th class="num">الكمية</th>
+          <th class="price">السعر</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHTML}</tbody>
+    </table>
+    <div class="r-subtotals">
+      <div class="r-meta-row"><span>عدد الاصناف</span><span>${items.length}</span></div>
+    </div>
+    <div class="r-total-line">
+      <span>الاجمالي</span>
+      <span>${Number(data.total).toFixed(2)} ج.م</span>
+    </div>
+    <div class="r-footer">
+      شكراً لتعاملكم معنا<br/>
+      يسعدنا خدمتكم دائماً
+    </div>
+  `;
+}
+
+function ReceiptModal({ data, onClose, successMode = false }) {
+  const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة الكترونية', insurance:'تأمين' };
+  const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
 
   const calcItemTotal = (item) => {
     let qty = item.qty;
@@ -358,114 +525,140 @@ function ReceiptModal({ data, onClose }) {
     return item.sellingPrice * qty;
   };
 
-  const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
-
   const handlePrint = () => {
-    const printContent = document.getElementById('receipt-print-area').innerHTML;
-    const win = window.open('', '_blank', 'width=400,height=600');
-    win.document.write(`
-      <html dir="rtl">
-        <head>
-          <meta charset="UTF-8"/>
-          <title>فاتورة مبيعات</title>
-          <style>
-            * { margin:0; padding:0; box-sizing:border-box; }
-            body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; padding: 16px; font-size: 13px; color: #000; }
-            .receipt-header { text-align:center; margin-bottom:12px; border-bottom:2px dashed #333; padding-bottom:10px; }
-            .receipt-header h2 { font-size:18px; font-weight:800; }
-            .receipt-header p { font-size:11px; color:#555; margin-top:2px; }
-            .info-row { display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px; }
-            .divider { border:none; border-top:1px dashed #aaa; margin:8px 0; }
-            table { width:100%; border-collapse:collapse; margin-top:8px; }
-            th { font-size:11px; font-weight:700; padding:4px 2px; border-bottom:1px solid #333; text-align:right; }
-            td { font-size:12px; padding:4px 2px; border-bottom:1px dashed #ddd; }
-            .total-row { font-size:15px; font-weight:800; display:flex; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:2px solid #333; }
-            .footer-text { text-align:center; font-size:11px; color:#777; margin-top:14px; }
-          </style>
-        </head>
-        <body>${printContent}</body>
-      </html>
-    `);
+    const win = window.open('', '_blank', 'width=420,height=700');
+    win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"/><title>فاتورة</title><style>${PRINT_STYLES}</style></head><body>${buildReceiptHTML(data)}</body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    setTimeout(() => { win.print(); win.close(); }, 400);
   };
+
+  const items = data.items || [];
 
   return (
     <div className="modal-overlay" style={{zIndex:1000}}>
-      <div className="modal" style={{maxWidth:'460px', width:'100%'}}>
-        <div className="modal-header" style={{background:'linear-gradient(135deg,#16a34a,#15803d)', borderRadius:'var(--radius) var(--radius) 0 0', padding:'20px 24px'}}>
-          <span className="modal-title" style={{color:'white', fontSize:'18px', display:'flex', alignItems:'center', gap:'10px'}}>
-            ✅ تم البيع بنجاح!
-          </span>
-          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'8px', width:'32px', height:'32px', cursor:'pointer', fontSize:'18px', display:'flex', alignItems:'center', justifyContent:'center'}}>×</button>
+      <div className="modal" style={{maxWidth:'480px', width:'100%', overflow:'hidden'}}>
+
+        {/* Header */}
+        <div className="modal-header" style={{
+          borderBottom: '1px solid var(--border)',
+          padding: '18px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{fontWeight:'800', fontSize:'16px', color: successMode ? 'var(--success)' : 'var(--text-primary)'}}>
+              {successMode ? 'تم البيع بنجاح' : 'فاتورة المبيعات'}
+            </div>
+            {data.id && (
+              <div style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontFamily:'monospace', letterSpacing:'0.5px'}}>
+                # {data.id.slice(0,8).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} style={{
+            background:'var(--bg)', border:'1px solid var(--border)', color:'var(--text-muted)',
+            borderRadius:'8px', width:'32px', height:'32px', cursor:'pointer',
+            fontSize:'18px', display:'flex', alignItems:'center', justifyContent:'center',
+            lineHeight:1
+          }}>×</button>
         </div>
 
-        <div className="modal-body" style={{padding:'0'}}>
-          {/* Receipt Preview */}
-          <div id="receipt-print-area" style={{padding:'20px 24px', fontFamily:'Cairo, sans-serif'}}>
-            <div className="receipt-header" style={{textAlign:'center', marginBottom:'16px', paddingBottom:'12px', borderBottom:'2px dashed #ddd'}}>
-              <h2 style={{fontSize:'16px', fontWeight:'800', marginBottom:'4px'}}>🏥 فاتورة مبيعات</h2>
-              {data.id && <p style={{fontSize:'11px', color:'var(--text-muted)'}}>رقم: {data.id.slice(0,8).toUpperCase()}...</p>}
-              <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px'}}>{new Date(data.ts).toLocaleString('ar-EG')}</p>
+        {/* Body - Receipt preview */}
+        <div className="modal-body" style={{padding:'0', maxHeight:'65vh', overflowY:'auto'}}>
+          <div style={{
+            margin: '16px 20px',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            fontFamily: "'Cairo', sans-serif",
+            fontSize: '13px',
+            direction: 'rtl',
+          }}>
+            {/* Receipt header */}
+            <div style={{
+              background: 'var(--bg)',
+              padding: '16px',
+              textAlign: 'center',
+              borderBottom: '1px solid var(--border)',
+            }}>
+              <div style={{fontWeight:'800', fontSize:'15px', letterSpacing:'0.3px'}}>الصيدلية</div>
+              <div style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px'}}>فاتورة مبيعات</div>
             </div>
 
-            <div style={{marginBottom:'12px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'4px'}}>
-                <span style={{color:'var(--text-muted)'}}>الكاشير:</span>
-                <span style={{fontWeight:'600'}}>{data.cashierName || '—'}</span>
-              </div>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'12px'}}>
-                <span style={{color:'var(--text-muted)'}}>طريقة الدفع:</span>
-                <span style={{fontWeight:'600'}}>{payLabel[data.paymentMethod] || data.paymentMethod}</span>
-              </div>
+            {/* Meta info */}
+            <div style={{padding:'12px 16px', borderBottom:'1px dashed var(--border)', background:'#fff'}}>
+              {[
+                ['التاريخ', new Date(data.ts).toLocaleDateString('ar-EG')],
+                ['الوقت', new Date(data.ts).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})],
+                ...(data.cashierName ? [['الكاشير', data.cashierName]] : []),
+                ['طريقة الدفع', payLabel[data.paymentMethod] || data.paymentMethod],
+              ].map(([label, val]) => (
+                <div key={label} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', lineHeight:'2', color:'#444'}}>
+                  <span style={{color:'var(--text-muted)'}}>{label}</span>
+                  <span style={{fontWeight:'600', color:'#111'}}>{val}</span>
+                </div>
+              ))}
             </div>
 
-            <hr style={{border:'none', borderTop:'1px dashed var(--border)', margin:'12px 0'}}/>
-
-            <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px'}}>
+            {/* Items table */}
+            <table style={{width:'100%', borderCollapse:'collapse', background:'#fff'}}>
               <thead>
-                <tr style={{borderBottom:'1px solid var(--border)'}}>
-                  <th style={{textAlign:'right', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>الدواء</th>
-                  <th style={{textAlign:'center', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>الكمية</th>
-                  <th style={{textAlign:'left', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>المبلغ</th>
+                <tr style={{background:'var(--bg)', borderBottom:'1px solid var(--border)'}}>
+                  <th style={{padding:'8px 16px', textAlign:'right', fontSize:'11px', fontWeight:'700', color:'var(--text-muted)'}}>الصنف</th>
+                  <th style={{padding:'8px 8px', textAlign:'center', fontSize:'11px', fontWeight:'700', color:'var(--text-muted)'}}>الكمية</th>
+                  <th style={{padding:'8px 16px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'var(--text-muted)'}}>السعر</th>
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((item, idx) => (
-                  <tr key={idx} style={{borderBottom:'1px dashed #f0f0f0'}}>
-                    <td style={{padding:'6px 0'}}>
-                      <div style={{fontWeight:'600'}}>{item.name}</div>
-                      {item.genericName && <div style={{fontSize:'10px', color:'var(--text-muted)'}}>{item.genericName}</div>}
+                {items.map((item, idx) => (
+                  <tr key={idx} style={{borderBottom:'1px dashed var(--border)'}}>
+                    <td style={{padding:'9px 16px'}}>
+                      <div style={{fontWeight:'700', fontSize:'13px'}}>{item.name}</div>
+                      {item.genericName && <div style={{fontSize:'10px', color:'var(--text-muted)', marginTop:'1px'}}>{item.genericName}</div>}
                     </td>
-                    <td style={{textAlign:'center', padding:'6px 0', color:'var(--text-secondary)'}}>
+                    <td style={{padding:'9px 8px', textAlign:'center', fontSize:'12px', color:'var(--text-secondary)'}}>
                       {item.qty} {typeLabel[item.quantityType] || item.quantityType}
                     </td>
-                    <td style={{textAlign:'left', padding:'6px 0', fontWeight:'600', color:'var(--primary)'}}>
-                      {calcItemTotal(item).toFixed(2)} ج
+                    <td style={{padding:'9px 16px', textAlign:'left', fontWeight:'700', fontSize:'13px', color:'var(--primary)'}}>
+                      {calcItemTotal(item).toFixed(2)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'2px solid var(--border)'}}>
-              <div style={{display:'flex', justifyContent:'space-between', fontSize:'18px', fontWeight:'800', color:'var(--primary)'}}>
-                <span>الإجمالي</span>
-                <span>{Number(data.total).toFixed(2)} ج</span>
+            {/* Totals */}
+            <div style={{padding:'12px 16px', background:'var(--bg)', borderTop:'1px solid var(--border)'}}>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:'12px', color:'var(--text-muted)', marginBottom:'8px'}}>
+                <span>عدد الاصناف</span><span>{items.length}</span>
+              </div>
+              <div style={{
+                display:'flex', justifyContent:'space-between', alignItems:'center',
+                paddingTop:'10px', borderTop:'2px solid var(--border)',
+                fontSize:'16px', fontWeight:'800',
+              }}>
+                <span>الاجمالي</span>
+                <span style={{color:'var(--primary)', fontSize:'18px'}}>{Number(data.total).toFixed(2)} ج.م</span>
               </div>
             </div>
 
-            <div style={{textAlign:'center', marginTop:'14px', fontSize:'11px', color:'var(--text-muted)'}}>
-              شكراً لثقتكم 🌿
+            {/* Footer */}
+            <div style={{
+              padding:'12px 16px', textAlign:'center',
+              fontSize:'11px', color:'var(--text-muted)',
+              borderTop:'1px dashed var(--border)',
+              lineHeight:'1.8', background:'#fff'
+            }}>
+              شكراً لتعاملكم معنا
             </div>
           </div>
         </div>
 
-        <div className="modal-footer" style={{gap:'10px', padding:'16px 24px'}}>
-          <button className="btn btn-ghost" onClick={onClose}>إغلاق</button>
-          <button className="btn btn-primary" style={{gap:'8px'}} onClick={handlePrint}>
-            🖨️ طباعة الفاتورة
+        {/* Footer buttons */}
+        <div className="modal-footer" style={{padding:'14px 20px', gap:'10px'}}>
+          <button className="btn btn-ghost" onClick={onClose}>اغلاق</button>
+          <button className="btn btn-primary" onClick={handlePrint} style={{gap:'8px'}}>
+            طباعة الفاتورة
           </button>
         </div>
       </div>
@@ -480,6 +673,7 @@ function SaleHistory() {
   const [pagination, setPagination] = useState({});
   const [date, setDate] = useState('');
   const [selected, setSelected] = useState(null);
+  const [printReceipt, setPrintReceipt] = useState(null);
 
   const load = async (p=1) => {
     setLoading(true);
@@ -499,6 +693,26 @@ function SaleHistory() {
   const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة', insurance:'تأمين' };
   const payColor = { cash:'badge-success', card:'badge-info', wallet:'badge-warning', insurance:'badge-gray' };
 
+  const openPrint = (s) => {
+    setPrintReceipt({
+      id: s.id,
+      total: s.total,
+      profit: s.profit,
+      paymentMethod: s.paymentMethod,
+      cashierName: s.cashierName,
+      ts: s.ts,
+      items: (s.items || []).map(i => ({
+        name: i.medicineName || i.name || '—',
+        genericName: i.genericName || '',
+        qty: i.qty,
+        quantityType: i.quantityType || 'box',
+        sellingPrice: i.sellingPrice || i.unitPrice || 0,
+        stripCount: i.stripCount,
+        pillCount: i.pillCount,
+      })),
+    });
+  };
+
   return (
     <div className="card animate-in">
       <div className="card-header" style={{flexWrap:'wrap',gap:'10px'}}>
@@ -506,7 +720,7 @@ function SaleHistory() {
         <div style={{display:'flex',gap:'10px',marginRight:'auto',flexWrap:'wrap'}}>
           <input type="date" className="form-control" style={{width:'180px'}} value={date} onChange={e=>setDate(e.target.value)} />
           <button className="btn btn-primary btn-sm" onClick={()=>load(1)}><Search size={14}/>بحث</button>
-          {date && <button className="btn btn-ghost btn-sm" onClick={()=>{setDate('');load(1);}}>إلغاء الفلتر</button>}
+          {date && <button className="btn btn-ghost btn-sm" onClick={()=>{setDate('');load(1);}}>الغاء الفلتر</button>}
         </div>
       </div>
       <div className="table-wrapper">
@@ -518,7 +732,7 @@ function SaleHistory() {
           <div className="empty-state"><History size={48}/><h3>لا توجد مبيعات</h3></div>
         ) : (
           <table>
-            <thead><tr><th>رقم الفاتورة</th><th>الإجمالي</th><th>الربح</th><th>طريقة الدفع</th><th>الكاشير</th><th>التاريخ</th></tr></thead>
+            <thead><tr><th>رقم الفاتورة</th><th>الاجمالي</th><th>الربح</th><th>طريقة الدفع</th><th>الكاشير</th><th>التاريخ</th><th></th></tr></thead>
             <tbody>
               {sales.map(s=>(
                 <tr key={s.id} style={{cursor:'pointer'}} onClick={()=>setSelected(s)}>
@@ -528,6 +742,16 @@ function SaleHistory() {
                   <td><span className={`badge ${payColor[s.paymentMethod]||'badge-gray'}`}>{payLabel[s.paymentMethod]||s.paymentMethod}</span></td>
                   <td>{s.cashierName}</td>
                   <td style={{fontSize:'12px',color:'var(--text-muted)'}}>{new Date(s.ts).toLocaleString('ar-EG')}</td>
+                  <td onClick={e=>e.stopPropagation()}>
+                    <button
+                      className="btn btn-ghost btn-icon"
+                      title="طباعة الفاتورة"
+                      style={{color:'var(--text-muted)'}}
+                      onClick={()=>openPrint(s)}
+                    >
+                      <Printer size={15}/>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -542,6 +766,11 @@ function SaleHistory() {
             <button className="page-btn" disabled={page===pagination.totalPages} onClick={()=>load(page+1)}>التالي</button>
           </div>
         </div>
+      )}
+
+      {printReceipt && createPortal(
+        <ReceiptModal data={printReceipt} onClose={() => setPrintReceipt(null)} />,
+        document.body
       )}
     </div>
   );
