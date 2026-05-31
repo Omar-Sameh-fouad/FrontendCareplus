@@ -196,28 +196,29 @@ function POS() {
             {showSuggestions && suggestions.length > 0 && (
               <div ref={suggestionsRef} style={{
                 position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
-                background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
-                boxShadow:'var(--shadow)', maxHeight:'300px', overflowY:'auto'
+                background:'#ffffff', border:'1.5px solid var(--primary)', borderRadius:'10px',
+                boxShadow:'0 8px 24px rgba(0,0,0,0.13)', maxHeight:'300px', overflowY:'auto'
               }}>
                 {suggestions.map((item, idx) => (
                   <div key={item.id||idx}
                     onClick={() => selectSuggestion(item)}
                     style={{
                       padding:'10px 14px', cursor:'pointer',
-                      borderBottom: idx < suggestions.length-1 ? '1px solid var(--border)' : 'none',
+                      borderBottom: idx < suggestions.length-1 ? '1px solid #f0f0f0' : 'none',
                       display:'flex', justifyContent:'space-between', alignItems:'center',
+                      background:'#ffffff',
                       transition:'background 0.1s'
                     }}
-                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg)'}
-                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                    onMouseEnter={e=>e.currentTarget.style.background='#f0faf7'}
+                    onMouseLeave={e=>e.currentTarget.style.background='#ffffff'}
                   >
                     <div>
-                      <div style={{fontWeight:'700', fontSize:'14px'}}>{item.name}</div>
-                      {item.genericName && <div style={{fontSize:'11px',color:'var(--text-muted)'}}>{item.genericName}</div>}
+                      <div style={{fontWeight:'700', fontSize:'14px', color:'#1a1a1a'}}>{item.name}</div>
+                      {item.genericName && <div style={{fontSize:'11px',color:'#888'}}>{item.genericName}</div>}
                     </div>
                     <div style={{textAlign:'left', flexShrink:0, marginRight:'12px'}}>
                       <div style={{fontWeight:'700', color:'var(--primary)', fontSize:'13px'}}>{Number(item.sellingPrice).toFixed(2)} ج</div>
-                      <div style={{fontSize:'11px', color: item.quantity > 0 ? 'var(--success)' : 'var(--danger)'}}>
+                      <div style={{fontSize:'11px', color: item.quantity > 0 ? '#16a34a' : '#dc2626'}}>
                         {item.quantity > 0 ? `متاح: ${item.quantity}` : 'نفذ'}
                       </div>
                     </div>
@@ -230,9 +231,9 @@ function POS() {
             {showSuggestions && suggestions.length === 0 && query.length >= 2 && !isBarcode(query) && !searching && (
               <div style={{
                 position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
-                background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
-                padding:'14px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px',
-                boxShadow:'var(--shadow)'
+                background:'#ffffff', border:'1.5px solid var(--primary)', borderRadius:'10px',
+                padding:'14px', textAlign:'center', color:'#888', fontSize:'13px',
+                boxShadow:'0 8px 24px rgba(0,0,0,0.13)'
               }}>لا توجد نتائج</div>
             )}
           </div>
