@@ -96,12 +96,14 @@ export default function Medicines() {
 
   // 👇 دالة معالجة الصورة وإرسالها للذكاء الاصطناعي
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+	if (files.length === 0) return;
 
-    const formData = new FormData();
-    formData.append('medicineImage', file);
+	const formData = new FormData();
 
+	files.forEach(file => {
+ 	 formData.append('medicineImages', file);
+});
     setAnalyzing(true);
     const loadingToast = toast.loading('الذكاء الاصطناعي بيقرأ العلبة... 🤖');
 
@@ -233,6 +235,7 @@ export default function Medicines() {
                     accept="image/*" 
                     capture="environment"
                     onChange={handleImageUpload}
+		      multiple
                     style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }}
                     disabled={analyzing}
                   />
