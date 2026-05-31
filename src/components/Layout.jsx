@@ -16,7 +16,8 @@ const navItems = [
   { to: '/reports', icon: FileText, label: 'التقارير', roles: ['admin', 'pharmacist'] },
   { to: '/logs', icon: Shield, label: 'سجل الأحداث', roles: ['admin'] },
   { to: '/notifications', icon: Bell, label: 'التنبيهات', roles: ['admin', 'pharmacist'] },
-  { to: '/settings', icon: Settings, label: 'الإعدادات', roles: ['admin'] },
+  // تم إضافة 'pharmacist' هنا ليظهر زر الإعدادات للصيدلي
+  { to: '/settings', icon: Settings, label: 'الإعدادات', roles: ['admin', 'pharmacist'] },
 ];
 
 // أهم 4 عناصر للـ bottom nav بناءً على الرول
