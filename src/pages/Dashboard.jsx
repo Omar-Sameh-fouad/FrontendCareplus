@@ -78,7 +78,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-info">
             <div className="stat-label">إجمالي الوردية</div>
-            <div className="stat-value">{Number(today?.grandTotal || 0).toFixed(0)} ج</div>
+            <div className="stat-value">{Number(today?.grandTotal || 0).toFixed(2)} ج</div>
             <div className="stat-sub">{today?.salesCount || 0} فاتورة</div>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-info">
             <div className="stat-label">مبيعات نقدي</div>
-            <div className="stat-value">{Number(today?.totals?.cash || 0).toFixed(0)} ج</div>
+            <div className="stat-value">{Number(today?.totals?.cash || 0).toFixed(2)} ج</div>
             <div className="stat-sub">كاش بالدرج</div>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-info">
             <div className="stat-label">كارت / محفظة</div>
-            <div className="stat-value">{Number((today?.totals?.card || 0) + (today?.totals?.wallet || 0)).toFixed(0)} ج</div>
+            <div className="stat-value">{Number((today?.totals?.card || 0) + (today?.totals?.wallet || 0)).toFixed(2)} ج</div>
             <div className="stat-sub">دفع إلكتروني</div>
           </div>
         </div>
