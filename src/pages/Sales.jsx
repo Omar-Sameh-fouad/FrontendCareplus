@@ -675,11 +675,12 @@ function SaleHistory() {
   const [selected, setSelected] = useState(null);
   const [printReceipt, setPrintReceipt] = useState(null);
 
-  const load = async (p=1) => {
+  const load = async (p = 1) => {
     setLoading(true);
     try {
-      const params = { page:p, limit:20 };
+      const params = { page: p, limit: 20 };
       if (date) params.date = date;
+      // الـ backend يفلتر تلقائي من الـ JWT — مش محتاج نبعت cashierId
       const { data } = await getSales(params);
       setSales(data.data);
       setPagination(data.pagination);
@@ -690,8 +691,8 @@ function SaleHistory() {
 
   useEffect(() => { load(); }, []);
 
-  const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة', insurance:'تأمين' };
-  const payColor = { cash:'badge-success', card:'badge-info', wallet:'badge-warning', insurance:'badge-gray' };
+  const payLabel = { cash: 'نقدي', card: 'كارت', wallet: 'محفظة', insurance: 'تأمين' };
+  const payColor = { cash: 'badge-success', card: 'badge-info', wallet: 'badge-warning', insurance: 'badge-gray' };
 
   const openPrint = (s) => {
     setPrintReceipt({
@@ -715,41 +716,44 @@ function SaleHistory() {
 
   return (
     <div className="card animate-in">
-      <div className="card-header" style={{flexWrap:'wrap',gap:'10px'}}>
-        <span className="card-title">سجل المبيعات</span>
-        <div style={{display:'flex',gap:'10px',marginRight:'auto',flexWrap:'wrap'}}>
-          <input type="date" className="form-control" style={{width:'180px'}} value={date} onChange={e=>setDate(e.target.value)} />
-          <button className="btn btn-primary btn-sm" onClick={()=>load(1)}><Search size={14}/>بحث</button>
-          {date && <button className="btn btn-ghost btn-sm" onClick={()=>{setDate('');load(1);}}>الغاء الفلتر</button>}
+      <div className="card-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
+        <span className="card-title">سجل مبيعاتي</span>
+        <div style={{ display: 'flex', gap: '10px', marginRight: 'auto', flexWrap: 'wrap' }}>
+          <input type="date" className="form-control" style={{ width: '180px' }} value={date} onChange={e => setDate(e.target.value)} />
+          <button className="btn btn-primary btn-sm" onClick={() => load(1)}><Search size={14} />بحث</button>
+          {date && <button className="btn btn-ghost btn-sm" onClick={() => { setDate(''); load(1); }}>الغاء الفلتر</button>}
         </div>
       </div>
       <div className="table-wrapper">
         {loading ? (
-          <div style={{padding:'40px',display:'flex',flexDirection:'column',gap:'12px'}}>
-            {[...Array(5)].map((_,i)=><div key={i} className="skeleton" style={{height:'44px',borderRadius:'6px'}}/>)}
+          <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '6px' }} />)}
           </div>
         ) : sales.length === 0 ? (
-          <div className="empty-state"><History size={48}/><h3>لا توجد مبيعات</h3></div>
+          <div className="empty-state"><History size={48} /><h3>لا توجد مبيعات</h3></div>
         ) : (
           <table>
-            <thead><tr><th>رقم الفاتورة</th><th>الاجمالي</th><th>الربح</th><th>طريقة الدفع</th><th>الكاشير</th><th>التاريخ</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>رقم الفاتورة</th>
+                <th>الاجمالي</th>
+                <th>الربح</th>
+                <th>طريقة الدفع</th>
+                <th>التاريخ</th>
+                <th></th>
+              </tr>
+            </thead>
             <tbody>
-              {sales.map(s=>(
-                <tr key={s.id} style={{cursor:'pointer'}} onClick={()=>setSelected(s)}>
-                  <td><code style={{fontSize:'11px',background:'var(--bg)',padding:'2px 6px',borderRadius:'4px'}}>{s.id.slice(0,8)}...</code></td>
-                  <td style={{fontWeight:'700',color:'var(--primary)'}}>{Number(s.total).toFixed(2)} ج</td>
-                  <td style={{color:'var(--success)',fontWeight:'600'}}>{Number(s.profit).toFixed(2)} ج</td>
-                  <td><span className={`badge ${payColor[s.paymentMethod]||'badge-gray'}`}>{payLabel[s.paymentMethod]||s.paymentMethod}</span></td>
-                  <td>{s.cashierName}</td>
-                  <td style={{fontSize:'12px',color:'var(--text-muted)'}}>{new Date(s.ts).toLocaleString('ar-EG')}</td>
-                  <td onClick={e=>e.stopPropagation()}>
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      title="طباعة الفاتورة"
-                      style={{color:'var(--text-muted)'}}
-                      onClick={()=>openPrint(s)}
-                    >
-                      <Printer size={15}/>
+              {sales.map(s => (
+                <tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(s)}>
+                  <td><code style={{ fontSize: '11px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '4px' }}>{s.id.slice(0, 8)}...</code></td>
+                  <td style={{ fontWeight: '700', color: 'var(--primary)' }}>{Number(s.total).toFixed(2)} ج</td>
+                  <td style={{ color: 'var(--success)', fontWeight: '600' }}>{Number(s.profit).toFixed(2)} ج</td>
+                  <td><span className={`badge ${payColor[s.paymentMethod] || 'badge-gray'}`}>{payLabel[s.paymentMethod] || s.paymentMethod}</span></td>
+                  <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(s.ts).toLocaleString('ar-EG')}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <button className="btn btn-ghost btn-icon" title="طباعة الفاتورة" style={{ color: 'var(--text-muted)' }} onClick={() => openPrint(s)}>
+                      <Printer size={15} />
                     </button>
                   </td>
                 </tr>
@@ -759,11 +763,11 @@ function SaleHistory() {
         )}
       </div>
       {pagination.totalPages > 1 && (
-        <div style={{padding:'16px 24px',borderTop:'1px solid var(--border)'}}>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)' }}>
           <div className="pagination">
-            <button className="page-btn" disabled={page===1} onClick={()=>load(page-1)}>السابق</button>
-            <span style={{fontSize:'13px',color:'var(--text-muted)'}}>صفحة {page} من {pagination.totalPages}</span>
-            <button className="page-btn" disabled={page===pagination.totalPages} onClick={()=>load(page+1)}>التالي</button>
+            <button className="page-btn" disabled={page === 1} onClick={() => load(page - 1)}>السابق</button>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>صفحة {page} من {pagination.totalPages}</span>
+            <button className="page-btn" disabled={page === pagination.totalPages} onClick={() => load(page + 1)}>التالي</button>
           </div>
         </div>
       )}
