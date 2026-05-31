@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { searchMedicine, searchMedicineByName, createSale, getSales } from '../api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle, Printer } from 'lucide-react';
+import { useAuth } from '../AuthContext'; // ✅ استدعاء معلومات اليوزر
 
 export default function Sales() {
   const [tab, setTab] = useState('pos');
@@ -667,6 +668,9 @@ function ReceiptModal({ data, onClose, successMode = false }) {
 }
 
 function SaleHistory() {
+  // ✅ جلب معلومات اليوزر من الـ AuthContext
+  const { user } = useAuth();
+  
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -678,9 +682,10 @@ function SaleHistory() {
   const load = async (p = 1) => {
     setLoading(true);
     try {
-      const params = { page: p, limit: 20 };
+      // ✅ إرسال cashierId للباك إند
+      const params = { page: p, limit: 20, cashierId: user?.id };
+      
       if (date) params.date = date;
-      // الـ backend يفلتر تلقائي من الـ JWT — مش محتاج نبعت cashierId
       const { data } = await getSales(params);
       setSales(data.data);
       setPagination(data.pagination);
