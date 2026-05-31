@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { searchMedicine, createSale, getSales } from '../api';
+import { searchMedicine, createSale, getSales, getMedicines } from '../api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle } from 'lucide-react';
 import { useEffect } from 'react';
@@ -32,11 +32,9 @@ export default function Sales() {
 }
 
 function POS() {
-  const [barcode, setBarcode] = useState('');
-  const [nameQuery, setNameQuery] = useState('');
+  const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchMode, setSearchMode] = useState('barcode'); // 'barcode' | 'name'
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loading, setLoading] = useState(false);
@@ -44,14 +42,16 @@ function POS() {
   const [interactionWarning, setInteractionWarning] = useState(null);
   const [pendingSaleData, setPendingSaleData] = useState(null);
   const inputRef = useRef(null);
-  const nameInputRef = useRef(null);
   const suggestionsRef = useRef(null);
+
+  // هل الإدخال باركود (أرقام فقط) أم اسم؟
+  const isBarcode = (val) => /^\d+$/.test(val.trim());
 
   // Close suggestions when clicking outside
   useEffect(() => {
     const handler = (e) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target) &&
-          nameInputRef.current && !nameInputRef.current.contains(e.target)) {
+          inputRef.current && !inputRef.current.contains(e.target)) {
         setShowSuggestions(false);
       }
     };
@@ -59,52 +59,54 @@ function POS() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Debounced name search
+  // Debounced name search — بس لو مش باركود
   useEffect(() => {
-    if (searchMode !== 'name') return;
-    if (!nameQuery.trim() || nameQuery.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (!query.trim() || isBarcode(query)) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (query.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const { data } = await searchMedicine(nameQuery.trim());
-        // API may return array or single item depending on backend
-        const results = Array.isArray(data) ? data : data.results || [data];
+        // GET /medicines?search=اسم&limit=10
+        const { data } = await getMedicines({ search: query.trim(), limit: 10 });
+        const results = data.data || data.results || (Array.isArray(data) ? data : []);
         setSuggestions(results);
-        setShowSuggestions(true);
+        setShowSuggestions(results.length > 0);
       } catch { setSuggestions([]); setShowSuggestions(false); }
       finally { setSearching(false); }
     }, 350);
     return () => clearTimeout(timer);
-  }, [nameQuery, searchMode]);
+  }, [query]);
 
-  const addToCart = (data) => {
-    const existing = cart.find(i => i.medicineId === data.id);
+  const addToCart = (item) => {
+    const existing = cart.find(i => i.medicineId === item.id);
     if (existing) {
-      setCart(cart.map(i => i.medicineId===data.id ? {...i, qty:i.qty+1} : i));
+      setCart(cart.map(i => i.medicineId===item.id ? {...i, qty:i.qty+1} : i));
     } else {
       setCart(prev => [...prev, {
-        medicineId: data.id, name: data.name,
-        genericName: data.genericName, sellingPrice: data.sellingPrice,
-        qty: 1, quantityType: 'box', stripCount: data.stripCount, pillCount: data.pillCount,
-        availableQty: data.quantity
+        medicineId: item.id, name: item.name,
+        genericName: item.genericName, sellingPrice: item.sellingPrice,
+        qty: 1, quantityType: 'box', stripCount: item.stripCount, pillCount: item.pillCount,
+        availableQty: item.quantity
       }]);
     }
   };
 
   const selectSuggestion = (item) => {
     addToCart(item);
-    setNameQuery('');
+    setQuery('');
     setSuggestions([]);
     setShowSuggestions(false);
-    nameInputRef.current?.focus();
+    inputRef.current?.focus();
   };
 
+  // Enter أو scan باركود
   const searchAndAdd = async () => {
-    if (!barcode.trim()) return;
+    if (!query.trim()) return;
+    if (!isBarcode(query)) return; // الاسم بيتعمل عبر الـ dropdown
     try {
-      const { data } = await searchMedicine(barcode.trim());
+      const { data } = await searchMedicine(query.trim());
       addToCart(data);
-      setBarcode('');
+      setQuery('');
       inputRef.current?.focus();
     } catch(err) {
       toast.error(err.response?.data?.error || 'الدواء غير موجود');
@@ -158,91 +160,83 @@ function POS() {
           {cart.length > 0 && <button className="btn btn-ghost btn-sm" style={{color:'var(--danger)'}} onClick={()=>setCart([])}>مسح الكل</button>}
         </div>
         <div style={{ padding:'16px', borderBottom:'1px solid var(--border)' }}>
-          {/* Mode Toggle */}
-          <div style={{ display:'flex', gap:'6px', marginBottom:'10px' }}>
-            {[{k:'barcode',l:'🔖 باركود'},{k:'name',l:'🔍 بحث بالاسم'}].map(m=>(
-              <button key={m.k} onClick={()=>{ setSearchMode(m.k); setBarcode(''); setNameQuery(''); setSuggestions([]); setShowSuggestions(false); setTimeout(()=>(m.k==='barcode'?inputRef:nameInputRef).current?.focus(),50); }}
-                style={{
-                  padding:'6px 14px', borderRadius:'8px', border:'1px solid var(--border)', cursor:'pointer',
-                  fontFamily:'Cairo,sans-serif', fontWeight:'600', fontSize:'12px',
-                  background: searchMode===m.k ? 'var(--primary)' : 'var(--card)',
-                  color: searchMode===m.k ? 'white' : 'var(--text-muted)',
-                  transition:'all 0.15s'
-                }}>{m.l}</button>
-            ))}
-          </div>
-
-          {searchMode === 'barcode' ? (
+          <div style={{ position:'relative' }}>
             <div style={{ display:'flex', gap:'10px' }}>
-              <div className="search-box" style={{ flex:1 }}>
+              <div className="search-box" style={{ flex:1, position:'relative' }}>
                 <Search className="search-icon" size={16}/>
+                {searching && (
+                  <span style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)'}}>
+                    <span className="spinner" style={{width:'14px',height:'14px'}}/>
+                  </span>
+                )}
                 <input
                   ref={inputRef}
                   className="form-control"
-                  placeholder="أدخل الباركود أو امسحه..."
-                  value={barcode}
-                  onChange={e=>setBarcode(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&searchAndAdd()}
+                  placeholder="باركود أو اسم الدواء..."
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => e.key==='Enter' && searchAndAdd()}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                   style={{ paddingRight:'42px' }}
                   autoFocus
                 />
               </div>
-              <button className="btn btn-primary" onClick={searchAndAdd}><Plus size={16}/>إضافة</button>
+              <button className="btn btn-primary" onClick={searchAndAdd} title="إضافة باركود">
+                <Plus size={16}/>
+              </button>
             </div>
-          ) : (
-            <div style={{ position:'relative' }}>
-              <div className="search-box">
-                <Search className="search-icon" size={16}/>
-                {searching && <span style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)'}}><span className="spinner" style={{width:'14px',height:'14px'}}/></span>}
-                <input
-                  ref={nameInputRef}
-                  className="form-control"
-                  placeholder="اكتب اسم الدواء..."
-                  value={nameQuery}
-                  onChange={e=>setNameQuery(e.target.value)}
-                  onFocus={()=>suggestions.length>0&&setShowSuggestions(true)}
-                  style={{ paddingRight:'42px' }}
-                  autoFocus
-                />
+
+            {/* hint صغير */}
+            {query && (
+              <div style={{fontSize:'11px',color:'var(--text-muted)',marginTop:'5px',paddingRight:'4px'}}>
+                {isBarcode(query) ? '🔖 باركود — اضغط Enter للإضافة' : '🔍 بحث بالاسم — اختر من القائمة'}
               </div>
-              {showSuggestions && suggestions.length > 0 && (
-                <div ref={suggestionsRef} style={{
-                  position:'absolute', top:'calc(100% + 6px)', right:0, left:0, zIndex:100,
-                  background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
-                  boxShadow:'var(--shadow)', maxHeight:'280px', overflowY:'auto'
-                }}>
-                  {suggestions.map((item, idx) => (
-                    <div key={item.id||idx}
-                      onClick={()=>selectSuggestion(item)}
-                      style={{
-                        padding:'10px 14px', cursor:'pointer', borderBottom: idx<suggestions.length-1?'1px solid var(--border)':'none',
-                        transition:'background 0.1s', display:'flex', justifyContent:'space-between', alignItems:'center'
-                      }}
-                      onMouseEnter={e=>e.currentTarget.style.background='var(--bg)'}
-                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                    >
-                      <div>
-                        <div style={{fontWeight:'700',fontSize:'14px'}}>{item.name}</div>
-                        {item.genericName&&<div style={{fontSize:'11px',color:'var(--text-muted)'}}>{item.genericName}</div>}
-                      </div>
-                      <div style={{textAlign:'left',flexShrink:0,marginRight:'10px'}}>
-                        <div style={{fontWeight:'700',color:'var(--primary)',fontSize:'13px'}}>{Number(item.sellingPrice).toFixed(2)} ج</div>
-                        <div style={{fontSize:'11px',color:item.quantity>0?'var(--success)':'var(--danger)'}}>{item.quantity>0?`متاح: ${item.quantity}`:'نفذ'}</div>
+            )}
+
+            {/* Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div ref={suggestionsRef} style={{
+                position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
+                background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
+                boxShadow:'var(--shadow)', maxHeight:'300px', overflowY:'auto'
+              }}>
+                {suggestions.map((item, idx) => (
+                  <div key={item.id||idx}
+                    onClick={() => selectSuggestion(item)}
+                    style={{
+                      padding:'10px 14px', cursor:'pointer',
+                      borderBottom: idx < suggestions.length-1 ? '1px solid var(--border)' : 'none',
+                      display:'flex', justifyContent:'space-between', alignItems:'center',
+                      transition:'background 0.1s'
+                    }}
+                    onMouseEnter={e=>e.currentTarget.style.background='var(--bg)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                  >
+                    <div>
+                      <div style={{fontWeight:'700', fontSize:'14px'}}>{item.name}</div>
+                      {item.genericName && <div style={{fontSize:'11px',color:'var(--text-muted)'}}>{item.genericName}</div>}
+                    </div>
+                    <div style={{textAlign:'left', flexShrink:0, marginRight:'12px'}}>
+                      <div style={{fontWeight:'700', color:'var(--primary)', fontSize:'13px'}}>{Number(item.sellingPrice).toFixed(2)} ج</div>
+                      <div style={{fontSize:'11px', color: item.quantity > 0 ? 'var(--success)' : 'var(--danger)'}}>
+                        {item.quantity > 0 ? `متاح: ${item.quantity}` : 'نفذ'}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-              {showSuggestions && suggestions.length === 0 && nameQuery.length >= 2 && !searching && (
-                <div style={{
-                  position:'absolute', top:'calc(100% + 6px)', right:0, left:0, zIndex:100,
-                  background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
-                  padding:'16px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px',
-                  boxShadow:'var(--shadow)'
-                }}>لا توجد نتائج</div>
-              )}
-            </div>
-          )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* No results */}
+            {showSuggestions && suggestions.length === 0 && query.length >= 2 && !isBarcode(query) && !searching && (
+              <div style={{
+                position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
+                background:'var(--card)', border:'1px solid var(--border)', borderRadius:'10px',
+                padding:'14px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px',
+                boxShadow:'var(--shadow)'
+              }}>لا توجد نتائج</div>
+            )}
+          </div>
         </div>
 
         {cart.length === 0 ? (
