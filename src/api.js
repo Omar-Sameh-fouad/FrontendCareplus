@@ -13,7 +13,6 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = secureStorage.getToken();
 
-  // نتحقق من صلاحية التوكن قبل كل request
   if (token && isTokenExpired(token)) {
     secureStorage.clear();
     window.location.href = '/login';
@@ -22,8 +21,7 @@ api.interceptors.request.use(config => {
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  // نمنع SQL injection في body
-  if (config.data && typeof config.data === 'object') {
+  if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
     const check = Object.entries(config.data).find(([, v]) =>
       typeof v === 'string' && containsSQLInjection(v)
     );
@@ -66,6 +64,12 @@ export const updateMedicine = (id, data) => api.put(`/medicines/${encodeURICompo
 export const deleteMedicine = (id) => api.delete(`/medicines/${encodeURIComponent(id)}`);
 export const getGenericSuggestions = (term) => api.get('/medicines/generic-suggestions', { params: { term } });
 
+// 👇 الدالة الجديدة الخاصة بالذكاء الاصطناعي
+export const analyzeMedicineImage = (formData) => api.post('/medicines/analyze-image', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  timeout: 30000 
+});
+
 // ─── Users ────────────────────────────────────────
 export const getUsers = () => api.get('/users');
 export const addUser = (data) => api.post('/users', data);
@@ -96,7 +100,7 @@ export const addLog = (data) => api.post('/logs', data);
 export const downloadBackup = () => api.get('/backup', { responseType: 'blob' });
 export const restoreBackup = (formData) => api.post('/restore', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
-  timeout: 120000, // 2 دقيقة للـ restore
+  timeout: 120000, 
 });
 export const setupSecurity = (data) => api.post('/security/setup', data);
 export const resetPin = (data) => api.post('/security/reset-pin', data);

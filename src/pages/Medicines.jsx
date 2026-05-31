@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers } from '../api';
+import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers, analyzeMedicineImage } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
 
@@ -52,6 +52,9 @@ export default function Medicines() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+  
+  // 👇 حالة الرفع والتحليل بالذكاء الاصطناعي
+  const [analyzing, setAnalyzing] = useState(false);
 
   const load = useCallback(async (page=1) => {
     setLoading(true);
@@ -89,6 +92,41 @@ export default function Medicines() {
       setDeleteId(null);
       load(pagination.page);
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ في الحذف'); }
+  };
+
+  // 👇 دالة معالجة الصورة وإرسالها للذكاء الاصطناعي
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('medicineImage', file);
+
+    setAnalyzing(true);
+    const loadingToast = toast.loading('الذكاء الاصطناعي بيقرأ العلبة... 🤖');
+
+    try {
+      const { data } = await analyzeMedicineImage(formData);
+      
+      setForm(prev => ({
+        ...prev,
+        name: data.name || prev.name,
+        barcode: data.barcode || prev.barcode,
+        genericName: data.genericName || prev.genericName,
+        manufacturer: data.manufacturer || prev.manufacturer,
+        medicineForm: data.medicineForm || prev.medicineForm,
+        expiryDate: data.expiryDate || prev.expiryDate,
+        stripCount: data.stripCount || prev.stripCount,
+        pillCount: data.pillCount || prev.pillCount,
+      }));
+
+      toast.success('تم استخراج البيانات بنجاح! راجعها وضيف السعر والكمية.', { id: loadingToast });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'فشل تحليل الصورة، حاول بصورة أوضح', { id: loadingToast });
+    } finally {
+      setAnalyzing(false);
+      e.target.value = ''; // تصفير الـ input
+    }
   };
 
   const filtered = medicines.filter(m =>
@@ -183,6 +221,40 @@ export default function Medicines() {
               <button className="btn btn-ghost btn-icon" onClick={()=>setShowModal(false)}>✕</button>
             </div>
             <div className="modal-body">
+              
+              {/* 👇 منطقة الرفع بالذكاء الاصطناعي (بتظهر في الإضافة والتعديل) */}
+              <div style={{ marginBottom: '24px' }}>
+                <label 
+                  className={`drop-zone ${analyzing ? 'drag-over' : ''}`} 
+                  style={{ display: 'block', position: 'relative' }}
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+                    disabled={analyzing}
+                  />
+                  {analyzing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <span className="spinner spinner-dark" style={{ width: '30px', height: '30px' }} />
+                      <p style={{ color: 'var(--primary)', fontWeight: '600' }}>جاري استخراج البيانات...</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                        ✨ تعبئة تلقائية بالذكاء الاصطناعي
+                      </h3>
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        اضغط هنا لالتقاط صورة للعلبة أو سحب ملف للصورة
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+              <hr className="divider" style={{ margin: '0 0 20px 0' }} />
+
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 20px'}}>
                 <F label="اسم الدواء *" name="name" placeholder="أدخل اسم الدواء" form={form} setForm={setForm} />
                 <F label="الباركود *" name="barcode" placeholder="الباركود" form={form} setForm={setForm} />
@@ -204,7 +276,7 @@ export default function Medicines() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
-              <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
+              <button className="btn btn-primary" disabled={saving || analyzing} onClick={handleSave}>
                 {saving?<span className="spinner"/>:(editing?'حفظ التعديلات':'إضافة الدواء')}
               </button>
             </div>
