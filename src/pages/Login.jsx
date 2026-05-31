@@ -106,7 +106,7 @@ export default function Login() {
                   placeholder="أدخل اسم المستخدم"
                   value={form.username}
                   onChange={e => { setForm({...form, username: e.target.value}); setErrors({...errors, username:''}); }}
-                  autoComplete="username"
+                  autoComplete="off"
                   maxLength={30}
                   autoFocus
                 />
@@ -125,7 +125,7 @@ export default function Login() {
                   placeholder="كلمة المرور"
                   value={form.password}
                   onChange={e => { setForm({...form, password: e.target.value}); setErrors({...errors, password:''}); }}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   maxLength={128}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)} style={{
@@ -211,7 +211,7 @@ function ForgotModal({ onClose }) {
           {step === 1 ? (
             <div className="form-group">
               <label className="form-label">البريد الإلكتروني</label>
-              <input className="form-control" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendOtp()} maxLength={100}/>
+              <input className="form-control" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendOtp()} maxLength={100} autoComplete="off" />
             </div>
           ) : (
             <>
@@ -220,12 +220,12 @@ function ForgotModal({ onClose }) {
               </div>
               <div className="form-group">
                 <label className="form-label">رمز التحقق (OTP)</label>
-                <input className="form-control" placeholder="الرمز المكون من 6 أرقام" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} maxLength={6}/>
+                <input className="form-control" placeholder="الرمز المكون من 6 أرقام" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} maxLength={6} autoComplete="off" />
               </div>
               <div className="form-group">
                 <label className="form-label">كلمة المرور الجديدة</label>
                 <div style={{ position:'relative' }}>
-                  <input className="form-control" type={showPass ? 'text' : 'password'} placeholder="6 أحرف على الأقل" value={newPass} onChange={e => setNewPass(e.target.value)} style={{ paddingLeft:'40px' }} maxLength={128}/>
+                  <input className="form-control" type={showPass ? 'text' : 'password'} placeholder="6 أحرف على الأقل" value={newPass} onChange={e => setNewPass(e.target.value)} style={{ paddingLeft:'40px' }} maxLength={128} autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPass(!showPass)} style={{ position:'absolute', left:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)' }}>
                     {showPass ? <EyeOff size={15}/> : <Eye size={15}/>}
                   </button>

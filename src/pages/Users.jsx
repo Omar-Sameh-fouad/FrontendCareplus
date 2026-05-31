@@ -148,18 +148,22 @@ export default function Users() {
             </div>
             <div className="modal-body">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 20px'}}>
-                <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل" form={form} setForm={setForm} />
-                <F label="اسم المستخدم *" name="username" placeholder="username" form={form} setForm={setForm} />
-                <F label="البريد الإلكتروني" name="email" type="email" placeholder="email@example.com" form={form} setForm={setForm} />
-                <F label="رقم الهاتف" name="phone" placeholder="01xxxxxxxxx" form={form} setForm={setForm} />
+                {/* خدعة لمنع المتصفح من الملء التلقائي */}
+                <input type="text" style={{ display: 'none' }} />
+                <input type="password" style={{ display: 'none' }} />
+
+                <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل" form={form} setForm={setForm} autoComplete="off" />
+                <F label="اسم المستخدم *" name="username" placeholder="username" form={form} setForm={setForm} autoComplete="off" />
+                <F label="البريد الإلكتروني" name="email" type="email" placeholder="email@example.com" form={form} setForm={setForm} autoComplete="off" />
+                <F label="رقم الهاتف" name="phone" placeholder="01xxxxxxxxx" form={form} setForm={setForm} autoComplete="off" />
                 <F label="الدور *" name="role" type="select" form={form} setForm={setForm}>
                   <option value="cashier">كاشير</option>
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
-                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} />
-                <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} />
-                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} />
+                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} autoComplete="new-password" />
+                <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} autoComplete="off" />
+                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
               </div>
               {editing && (
                 <div className="form-group">
