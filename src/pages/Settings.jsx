@@ -425,7 +425,7 @@ function DailyClosingSection() {
 
 export default function Settings() {
   const [security, setSecurity] = useState(null);
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const loadSecurity = async () => {
     try { const { data } = await getSecurity(); setSecurity(data); }
@@ -434,11 +434,14 @@ export default function Settings() {
 
   useEffect(() => { loadSecurity(); }, []);
 
-  if (!isAdmin) return (
+  // التحقق مما إذا كان المستخدم أدمن أو صيدلي للسماح بدخول الصفحة
+  const isManager = isAdmin || user?.role === 'pharmacist';
+
+  if (!isManager) return (
     <div className="empty-state" style={{ padding:'80px' }}>
       <Shield size={56}/>
       <h3>غير مصرح</h3>
-      <p>هذه الصفحة للمدير فقط</p>
+      <p>هذه الصفحة للمشرفين فقط</p>
     </div>
   );
 
@@ -450,10 +453,15 @@ export default function Settings() {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px' }}>
-        <SecuritySection security={security} onRefresh={loadSecurity}/>
+        {/* تظهر فقط للأدمن */}
+        {isAdmin && <SecuritySection security={security} onRefresh={loadSecurity}/>}
+        
+        {/* تظهر للأدمن وللصيدلي */}
         <DailyClosingSection/>
-        <BackupSection/>
-        <RestoreSection/>
+        
+        {/* تظهر فقط للأدمن */}
+        {isAdmin && <BackupSection/>}
+        {isAdmin && <RestoreSection/>}
       </div>
     </div>
   );
