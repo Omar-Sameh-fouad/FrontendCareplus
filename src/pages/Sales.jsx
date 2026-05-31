@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { searchMedicine, createSale, getSales, getMedicines } from '../api';
+import { searchMedicine, searchMedicineByName, createSale, getSales } from '../api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle } from 'lucide-react';
 import { useEffect } from 'react';
@@ -66,9 +66,8 @@ function POS() {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        // GET /medicines?search=اسم&limit=10
-        const { data } = await getMedicines({ search: query.trim(), limit: 10 });
-        const results = data.data || data.results || (Array.isArray(data) ? data : []);
+        const { data } = await searchMedicineByName(query.trim());
+        const results = Array.isArray(data) ? data : [];
         setSuggestions(results);
         setShowSuggestions(results.length > 0);
       } catch { setSuggestions([]); setShowSuggestions(false); }

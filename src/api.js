@@ -60,6 +60,7 @@ export const createFirstAdmin = () => api.post('/create-first-admin');
 // ─── Medicines ────────────────────────────────────
 export const getMedicines = (params) => api.get('/medicines', { params });
 export const searchMedicine = (barcode) => api.get(`/medicines/search/${encodeURIComponent(barcode)}`);
+export const searchMedicineByName = (q) => api.get('/medicines/search-by-name', { params: { q } });
 export const addMedicine = (data) => api.post('/medicines', data);
 export const updateMedicine = (id, data) => api.put(`/medicines/${encodeURIComponent(id)}`, data);
 export const deleteMedicine = (id) => api.delete(`/medicines/${encodeURIComponent(id)}`);
