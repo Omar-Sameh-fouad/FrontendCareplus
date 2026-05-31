@@ -136,11 +136,11 @@ export default function Dashboard() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={history} margin={{ top:0, right:0, left:-20, bottom:0 }}>
+                <BarChart data={history} margin={{ top:0, right:0, left:0, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f3" />
                   <XAxis dataKey="date" tick={{ fontSize:11, fontFamily:'Cairo' }}
                     tickFormatter={d => new Date(d).toLocaleDateString('ar-EG', { weekday:'short' })} />
-                  <YAxis tick={{ fontSize:11, fontFamily:'Cairo' }} />
+                  <YAxis tick={{ fontSize:11, fontFamily:'Cairo' }} width={45} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v} />
                   <Tooltip
                     formatter={(v) => [`${v.toFixed(0)} ج`, 'المبيعات']}
                     contentStyle={{ fontFamily:'Cairo', borderRadius:'8px', border:'1px solid #e2e8f0', fontSize:'12px' }}

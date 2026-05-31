@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers, analyzeMedicineImage } from '../api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, Camera, ImagePlus, X as XIcon, Send, AlertCircle } from 'lucide-react';
 
 const emptyForm = {
   name:'', barcode:'', expiryDate:'', quantity:0, purchasePrice:0,
@@ -55,6 +55,7 @@ export default function Medicines() {
   
   // 👇 حالة الرفع والتحليل بالذكاء الاصطناعي
   const [analyzing, setAnalyzing] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
 
   const load = useCallback(async (page=1) => {
     setLoading(true);
@@ -94,22 +95,31 @@ export default function Medicines() {
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ في الحذف'); }
   };
 
-  // 👇 دالة معالجة الصورة وإرسالها للذكاء الاصطناعي
-  const handleImageUpload = async (e) => {
+  // 👇 إضافة صور للـ preview
+  const handleAddImages = (e) => {
     const files = Array.from(e.target.files);
-	if (files.length === 0) return;
+    if (!files.length) return;
+    const newImgs = files.map(file => ({ file, previewUrl: URL.createObjectURL(file), id: Math.random().toString(36).slice(2) }));
+    setSelectedImages(prev => [...prev, ...newImgs]);
+    e.target.value = '';
+  };
 
-	const formData = new FormData();
+  const removeImage = (id) => {
+    setSelectedImages(prev => {
+      const img = prev.find(i => i.id === id);
+      if (img) URL.revokeObjectURL(img.previewUrl);
+      return prev.filter(i => i.id !== id);
+    });
+  };
 
-	files.forEach(file => {
- 	 formData.append('medicineImages', file);
-});
+  const handleAnalyze = async () => {
+    if (!selectedImages.length) return;
+    const formData = new FormData();
+    selectedImages.forEach(img => formData.append('medicineImages', img.file));
     setAnalyzing(true);
-    const loadingToast = toast.loading('الذكاء الاصطناعي بيقرأ العلبة... 🤖');
-
+    const tid = toast.loading('الذكاء الاصطناعي بيقرأ العلبة... 🤖');
     try {
       const { data } = await analyzeMedicineImage(formData);
-      
       setForm(prev => ({
         ...prev,
         name: data.name || prev.name,
@@ -121,17 +131,14 @@ export default function Medicines() {
         stripCount: data.stripCount || prev.stripCount,
         pillCount: data.pillCount || prev.pillCount,
       }));
-
-      toast.success('تم استخراج البيانات بنجاح! راجعها وضيف السعر والكمية.', { id: loadingToast });
+      toast.success('تم استخراج البيانات بنجاح! راجعها وضيف السعر والكمية.', { id: tid });
+      setSelectedImages([]);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'فشل تحليل الصورة، حاول بصورة أوضح', { id: loadingToast });
-    } finally {
-      setAnalyzing(false);
-      e.target.value = ''; // تصفير الـ input
-    }
+      toast.error(err.response?.data?.error || 'فشل تحليل الصورة، حاول بصورة أوضح', { id: tid });
+    } finally { setAnalyzing(false); }
   };
 
-  const filtered = medicines.filter(m =>
+    const filtered = medicines.filter(m =>
     m.name?.toLowerCase().includes(search.toLowerCase()) ||
     m.barcode?.includes(search)
   );
@@ -224,37 +231,62 @@ export default function Medicines() {
             </div>
             <div className="modal-body">
               
-              {/* 👇 منطقة الرفع بالذكاء الاصطناعي (بتظهر في الإضافة والتعديل) */}
-              <div style={{ marginBottom: '24px' }}>
-                <label 
-                  className={`drop-zone ${analyzing ? 'drag-over' : ''}`} 
-                  style={{ display: 'block', position: 'relative' }}
-                >
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment"
-                    onChange={handleImageUpload}
-		      multiple
-                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 10 }}
-                    disabled={analyzing}
-                  />
-                  {analyzing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <span className="spinner spinner-dark" style={{ width: '30px', height: '30px' }} />
-                      <p style={{ color: 'var(--primary)', fontWeight: '600' }}>جاري استخراج البيانات...</p>
+              {/* ✨ منطقة الذكاء الاصطناعي */}
+              <div style={{ marginBottom: '20px', background: 'linear-gradient(135deg,#f0faf8,#e8f5f2)', border: '1.5px solid #a7d9d0', borderRadius: 'var(--radius)', padding: '16px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
+                  <span style={{ fontSize:'16px' }}>✨</span>
+                  <span style={{ fontWeight:'700', fontSize:'14px', color:'var(--primary-dark)' }}>تعبئة تلقائية بالذكاء الاصطناعي</span>
+                </div>
+
+                {/* رسالة إرشادية */}
+                <div style={{ display:'flex', alignItems:'flex-start', gap:'8px', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'8px', padding:'10px 12px', marginBottom:'12px' }}>
+                  <AlertCircle size={15} color="#d97706" style={{ flexShrink:0, marginTop:'1px' }} />
+                  <p style={{ fontSize:'12px', color:'#92400e', lineHeight:'1.6', margin:0 }}>
+                    صوّر العلبة من <strong>أكثر من زاوية</strong> للحصول على أفضل النتائج — يُنصح بـ <strong>5 صور أو أكثر</strong> (الأمام، الخلف، الجانب، الباركود، تاريخ الانتهاء)
+                  </p>
+                </div>
+
+                {/* زراير الإضافة */}
+                <div style={{ display:'flex', gap:'8px', marginBottom: selectedImages.length > 0 ? '12px' : '0' }}>
+                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor:'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
+                    <input type="file" accept="image/*" capture="environment" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing} />
+                    <Camera size={16} /> تصوير
+                  </label>
+                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor:'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
+                    <input type="file" accept="image/*" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing} />
+                    <ImagePlus size={16} /> من الصور
+                  </label>
+                </div>
+
+                {/* Preview */}
+                {selectedImages.length > 0 && (
+                  <div>
+                    {selectedImages.length < 5 && (
+                      <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'8px', padding:'7px 10px', background:'rgba(249,115,22,0.08)', borderRadius:'6px' }}>
+                        <AlertCircle size={13} color="var(--warning)" />
+                        <span style={{ fontSize:'11.5px', color:'var(--warning)' }}>
+                          عندك {selectedImages.length} {selectedImages.length === 1 ? 'صورة' : 'صور'} — يُنصح بـ 5 على الأقل ({5 - selectedImages.length} باقيين)
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'12px' }}>
+                      {selectedImages.map(img => (
+                        <div key={img.id} style={{ position:'relative', width:'68px', height:'68px', borderRadius:'8px', overflow:'hidden', border:'2px solid var(--border)', flexShrink:0 }}>
+                          <img src={img.previewUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          <button onClick={() => removeImage(img.id)} style={{ position:'absolute', top:'2px', left:'2px', width:'20px', height:'20px', borderRadius:'50%', background:'rgba(239,68,68,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'white', padding:0 }}>
+                            <XIcon size={11} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                        ✨ تعبئة تلقائية بالذكاء الاصطناعي
-                      </h3>
-                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        اضغط هنا لالتقاط صورة للعلبة أو سحب ملف للصورة
-                      </p>
-                    </div>
-                  )}
-                </label>
+                    <button onClick={handleAnalyze} disabled={analyzing} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'10px', borderRadius:'8px', border:'none', background: analyzing ? 'var(--border)' : 'var(--primary)', color: analyzing ? 'var(--text-muted)' : 'white', fontFamily:'Cairo', fontWeight:'700', fontSize:'14px', cursor: analyzing ? 'not-allowed' : 'pointer' }}>
+                      {analyzing
+                        ? <><span className="spinner" style={{ width:'16px', height:'16px' }} /> جاري التحليل...</>
+                        : <><Send size={15} /> تحليل {selectedImages.length} {selectedImages.length === 1 ? 'صورة' : 'صور'} بالذكاء الاصطناعي</>
+                      }
+                    </button>
+                  </div>
+                )}
               </div>
               <hr className="divider" style={{ margin: '0 0 20px 0' }} />
 
