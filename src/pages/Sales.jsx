@@ -682,8 +682,8 @@ function SaleHistory() {
   const load = async (p = 1) => {
     setLoading(true);
     try {
-      // ✅ إرسال cashierId للباك إند
-      const params = { page: p, limit: 20, cashierId: user?.id };
+      // الباك إند بيفلتر تلقائياً من الـ token — مش محتاجين نبعت cashierId
+      const params = { page: p, limit: 20 };
       
       if (date) params.date = date;
       const { data } = await getSales(params);
