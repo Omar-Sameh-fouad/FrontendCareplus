@@ -41,9 +41,26 @@ export default function Users() {
 
   const load = async () => {
     setLoading(true);
-    try { const {data} = await getUsers(); setUsers(data); }
-    catch { toast.error('فشل تحميل الموظفين'); }
-    finally { setLoading(false); }
+    try { 
+      const {data} = await getUsers(); 
+      
+      // الحل هنا من الفرونت اند: معالجة حالة "نشط/موقوف" عشان نتفادى مشكلة الـ Buffer اللي بتيجي من الداتا بيز
+      const cleanedData = data.map(u => {
+        let isActive = 1; // الافتراضي نشط
+        if (u.active && typeof u.active === 'object' && u.active.data) {
+          isActive = u.active.data[0]; // لو رجعت على هيئة Buffer
+        } else if (u.active === 0 || u.active === '0' || u.active === false) {
+          isActive = 0; // لو رجعت صفر صريح
+        }
+        return { ...u, active: isActive };
+      });
+
+      setUsers(cleanedData); 
+    } catch { 
+      toast.error('فشل تحميل الموظفين'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -161,19 +178,20 @@ export default function Users() {
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
-                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} autoComplete="new-password" />
+                <F label={editing?'كلمة مرور جديدة (للتغيير فقط)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} autoComplete="new-password" />
                 <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} autoComplete="off" />
                 <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
               </div>
-              {editing && (
-                <div className="form-group">
-                  <label className="form-label">الحالة</label>
-                  <select className="form-control" value={form.active} onChange={e=>setForm({...form,active:parseInt(e.target.value)})}>
-                    <option value={1}>نشط</option>
-                    <option value={0}>موقوف</option>
-                  </select>
-                </div>
-              )}
+              
+              {/* حقل الحالة أصبح ظاهراً دائماً */}
+              <div className="form-group" style={{ marginTop: '10px' }}>
+                <label className="form-label">الحالة</label>
+                <select className="form-control" value={form.active} onChange={e=>setForm({...form,active:parseInt(e.target.value)})}>
+                  <option value={1}>نشط</option>
+                  <option value={0}>موقوف</option>
+                </select>
+              </div>
+
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
