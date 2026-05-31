@@ -8,7 +8,6 @@ const emptyForm = { username:'', fullName:'', email:'', phone:'', role:'cashier'
 const roles = { admin:'مدير', pharmacist:'صيدلي', cashier:'كاشير' };
 const roleBadge = { admin:'badge-danger', pharmacist:'badge-info', cashier:'badge-success' };
 
-// تم استخراج المكون خارج الـ Component الرئيسي لتجنب فقدان الـ Focus
 const F = ({ label, name, type='text', form, setForm, ...rest }) => {
   const handleChange = (e) => {
     let val = e.target.value;
@@ -53,10 +52,20 @@ export default function Users() {
   const openEdit = (u) => { setEditing(u); setForm({...u, password:''}); setShowModal(true); };
 
   const handleSave = async () => {
+    // === التحقق من طول كلمة المرور (6 رموز بالضبط) ===
+    if (!editing && (!form.password || form.password.length !== 6)) {
+      toast.error('كلمة المرور يجب أن تتكون من 6 أحرف/أرقام بالضبط');
+      return;
+    }
+    if (editing && form.password && form.password.length !== 6) {
+      toast.error('كلمة المرور الجديدة يجب أن تتكون من 6 أحرف/أرقام بالضبط');
+      return;
+    }
+
     setSaving(true);
     try {
-      if (editing) { await updateUser(editing.id, form); toast.success('تم التعديل'); }
-      else { await addUser(form); toast.success('تم إضافة الموظف'); }
+      if (editing) { await updateUser(editing.id, form); toast.success('تم التعديل بنجاح'); }
+      else { await addUser(form); toast.success('تم إضافة الموظف بنجاح'); }
       setShowModal(false); load();
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ'); }
     finally { setSaving(false); }
@@ -148,7 +157,7 @@ export default function Users() {
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
-                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="كلمة المرور" form={form} setForm={setForm} />
+                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} />
                 <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} />
                 <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} />
               </div>

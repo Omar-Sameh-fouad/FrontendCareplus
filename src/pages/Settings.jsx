@@ -357,7 +357,7 @@ function DailyClosingSection() {
   useEffect(() => { loadPreview(); }, []);
 
   const handleClose = async () => {
-    if (pin.length < 4) { toast.error('أدخل رمز PIN'); return; }
+    if (!pin.trim()) { toast.error('أدخل كلمة المرور'); return; }
     const rl = clientRateLimit('closing', 3, 5 * 60 * 1000);
     if (rl.blocked) { toast.error(rl.message); return; }
     setClosing(true);
@@ -375,7 +375,7 @@ function DailyClosingSection() {
       clearRateLimit('closing');
       toast.success('✅ تم تقفيل اليوم بنجاح');
       setPin('');
-    } catch(err) { toast.error(err.response?.data?.error || 'PIN غير صحيح'); }
+    } catch(err) { toast.error(err.response?.data?.error || 'كلمة المرور غير صحيحة'); }
     finally { setClosing(false); }
   };
 
@@ -403,8 +403,19 @@ function DailyClosingSection() {
             ))}
           </div>
         )}
-        <PinInput value={pin} onChange={setPin} label="أدخل رمز PIN للتأكيد" length={6}/>
-        <button className="btn btn-accent" disabled={closing || pin.length < 4} onClick={handleClose} style={{ width:'100%', justifyContent:'center', marginTop:'16px', fontWeight:'700' }}>
+        
+        <div className="form-group" style={{ marginBottom: '0' }}>
+          <label className="form-label">أدخل كلمة المرور للتأكيد</label>
+          <input
+            className="form-control"
+            type="password"
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            placeholder="كلمة المرور الخاصة بحسابك..."
+          />
+        </div>
+
+        <button className="btn btn-accent" disabled={closing || !pin.trim()} onClick={handleClose} style={{ width:'100%', justifyContent:'center', marginTop:'16px', fontWeight:'700' }}>
           {closing ? <><span className="spinner dark"/>&nbsp;جاري التقفيل...</> : '🔒 تقفيل اليوم'}
         </button>
       </div>
