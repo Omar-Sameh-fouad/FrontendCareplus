@@ -281,7 +281,6 @@ export function Reports() {
       </tr>
     `).join('');
 
-    // المنطق الجديد: لو تاريخ البداية هو نفس النهاية، نطبع "تاريخ التقرير"، ولو مختلفين نطبع "الفترة من.. إلى"
     const dateLabel = startDate === endDate 
       ? `تاريخ التقرير: ${new Date(startDate).toLocaleDateString('ar-EG')}`
       : `الفترة: من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}`;
@@ -443,29 +442,20 @@ export function Reports() {
               </div>
             </div>
             
-            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
-              <div className="stat-card">
-                <div style={{background:'#fefcbf',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>🧾</div>
-                <div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>عدد العمليات</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800' }}>{dailySummary.count}</div>
-                </div>
+            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px', paddingTop: '16px' }}>
+              <div style={{ border: '2px solid #f1f5f9', borderRadius: '10px', padding: '24px 16px', textAlign: 'center', background: '#ffffff', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>عدد العمليات</div>
+                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a' }}>{dailySummary.count}</div>
               </div>
               
-              <div className="stat-card">
-                <div style={{background:'#c6f6d5',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>💰</div>
-                <div>
-                  <div style={{ fontSize: '12px', color: 'var(--success)', marginBottom: '4px' }}>إجمالي المبيعات</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--success)' }}>{dailySummary.total.toFixed(2)} ج</div>
-                </div>
+              <div style={{ border: '2px solid #bbf7d0', borderRadius: '10px', padding: '24px 16px', textAlign: 'center', background: '#f0fdf4', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div style={{ fontSize: '14px', color: '#16a34a', marginBottom: '8px', fontWeight: '600' }}>إجمالي المبيعات</div>
+                <div style={{ fontSize: '26px', fontWeight: '800', color: '#16a34a' }}>{dailySummary.total.toFixed(2)} ج</div>
               </div>
               
-              <div className="stat-card">
-                <div style={{background:'#bee3f8',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>📈</div>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#0f766e', marginBottom: '4px' }}>صافي الربح</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
-                </div>
+              <div style={{ border: '2px solid #ccfbf1', borderRadius: '10px', padding: '24px 16px', textAlign: 'center', background: '#f0fdfa', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+                <div style={{ fontSize: '14px', color: '#0f766e', marginBottom: '8px', fontWeight: '600' }}>صافي الربح</div>
+                <div style={{ fontSize: '26px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
               </div>
             </div>
 
