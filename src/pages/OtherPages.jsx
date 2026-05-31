@@ -263,7 +263,7 @@ export function Reports() {
     loadHistory();
   }, [range, tab]);
 
-  // دالة الطباعة
+  // دالة الطباعة المتوافقة مع يوم واحد أو فترة
   const printDailyReport = () => {
     if (dailyOperations.length === 0) {
       toast.error('لا توجد عمليات لطباعتها في هذه الفترة');
@@ -280,6 +280,11 @@ export function Reports() {
         <td class="profit">${Number(op.profit).toFixed(2)} ج</td>
       </tr>
     `).join('');
+
+    // المنطق الجديد: لو تاريخ البداية هو نفس النهاية، نطبع "تاريخ التقرير"، ولو مختلفين نطبع "الفترة من.. إلى"
+    const dateLabel = startDate === endDate 
+      ? `تاريخ التقرير: ${new Date(startDate).toLocaleDateString('ar-EG')}`
+      : `الفترة: من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -313,7 +318,7 @@ export function Reports() {
       <body>
         <div class="header">
           <h1>التقرير المالي المفصل</h1>
-          <p>الفترة: من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}</p>
+          <p>${dateLabel}</p>
         </div>
         
         <div class="summary">
@@ -395,7 +400,6 @@ export function Reports() {
               
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 
-                {/* الزرار الجديد (اليوم) في نفس السطر وبنفس الارتفاع */}
                 <button 
                   className="btn btn-outline" 
                   onClick={() => {
@@ -408,7 +412,6 @@ export function Reports() {
                   اليوم فقط
                 </button>
 
-                {/* الفلاتر القديمة زي ما هي بالظبط وبدون أي تعديل في الأبعاد */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg)', padding: '4px 8px', borderRadius: '8px' }}>
                   <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>من:</span>
                   <input 
