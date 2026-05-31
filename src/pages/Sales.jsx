@@ -41,6 +41,7 @@ function POS() {
   const [searching, setSearching] = useState(false);
   const [interactionWarning, setInteractionWarning] = useState(null);
   const [pendingSaleData, setPendingSaleData] = useState(null);
+  const [receiptData, setReceiptData] = useState(null);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
@@ -132,7 +133,15 @@ function POS() {
         forceInteraction: force
       };
       const { data } = await createSale(saleData);
-      toast.success(`✅ تم البيع! الإجمالي: ${data.total?.toFixed(2)} ج`);
+      setReceiptData({
+        id: data.id,
+        total: data.total,
+        profit: data.profit,
+        paymentMethod,
+        items: cart,
+        ts: new Date().toISOString(),
+        cashierName: data.cashierName,
+      });
       setCart([]);
       setInteractionWarning(null);
       setPendingSaleData(null);
@@ -330,6 +339,136 @@ function POS() {
         </div>,
         document.body
       )}
+
+      {receiptData && createPortal(
+        <ReceiptModal data={receiptData} onClose={() => setReceiptData(null)} />,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function ReceiptModal({ data, onClose }) {
+  const payLabel = { cash:'نقدي 💵', card:'كارت 💳', wallet:'محفظة إلكترونية 📱', insurance:'تأمين 🏥' };
+
+  const calcItemTotal = (item) => {
+    let qty = item.qty;
+    if (item.quantityType === 'strip' && item.stripCount) qty = item.qty / item.stripCount;
+    if (item.quantityType === 'pill' && item.pillCount) qty = item.qty / item.pillCount;
+    return item.sellingPrice * qty;
+  };
+
+  const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('receipt-print-area').innerHTML;
+    const win = window.open('', '_blank', 'width=400,height=600');
+    win.document.write(`
+      <html dir="rtl">
+        <head>
+          <meta charset="UTF-8"/>
+          <title>فاتورة مبيعات</title>
+          <style>
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; padding: 16px; font-size: 13px; color: #000; }
+            .receipt-header { text-align:center; margin-bottom:12px; border-bottom:2px dashed #333; padding-bottom:10px; }
+            .receipt-header h2 { font-size:18px; font-weight:800; }
+            .receipt-header p { font-size:11px; color:#555; margin-top:2px; }
+            .info-row { display:flex; justify-content:space-between; margin-bottom:4px; font-size:12px; }
+            .divider { border:none; border-top:1px dashed #aaa; margin:8px 0; }
+            table { width:100%; border-collapse:collapse; margin-top:8px; }
+            th { font-size:11px; font-weight:700; padding:4px 2px; border-bottom:1px solid #333; text-align:right; }
+            td { font-size:12px; padding:4px 2px; border-bottom:1px dashed #ddd; }
+            .total-row { font-size:15px; font-weight:800; display:flex; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:2px solid #333; }
+            .footer-text { text-align:center; font-size:11px; color:#777; margin-top:14px; }
+          </style>
+        </head>
+        <body>${printContent}</body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 300);
+  };
+
+  return (
+    <div className="modal-overlay" style={{zIndex:1000}}>
+      <div className="modal" style={{maxWidth:'460px', width:'100%'}}>
+        <div className="modal-header" style={{background:'linear-gradient(135deg,#16a34a,#15803d)', borderRadius:'var(--radius) var(--radius) 0 0', padding:'20px 24px'}}>
+          <span className="modal-title" style={{color:'white', fontSize:'18px', display:'flex', alignItems:'center', gap:'10px'}}>
+            ✅ تم البيع بنجاح!
+          </span>
+          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:'8px', width:'32px', height:'32px', cursor:'pointer', fontSize:'18px', display:'flex', alignItems:'center', justifyContent:'center'}}>×</button>
+        </div>
+
+        <div className="modal-body" style={{padding:'0'}}>
+          {/* Receipt Preview */}
+          <div id="receipt-print-area" style={{padding:'20px 24px', fontFamily:'Cairo, sans-serif'}}>
+            <div className="receipt-header" style={{textAlign:'center', marginBottom:'16px', paddingBottom:'12px', borderBottom:'2px dashed #ddd'}}>
+              <h2 style={{fontSize:'16px', fontWeight:'800', marginBottom:'4px'}}>🏥 فاتورة مبيعات</h2>
+              {data.id && <p style={{fontSize:'11px', color:'var(--text-muted)'}}>رقم: {data.id.slice(0,8).toUpperCase()}...</p>}
+              <p style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px'}}>{new Date(data.ts).toLocaleString('ar-EG')}</p>
+            </div>
+
+            <div style={{marginBottom:'12px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'4px'}}>
+                <span style={{color:'var(--text-muted)'}}>الكاشير:</span>
+                <span style={{fontWeight:'600'}}>{data.cashierName || '—'}</span>
+              </div>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:'12px'}}>
+                <span style={{color:'var(--text-muted)'}}>طريقة الدفع:</span>
+                <span style={{fontWeight:'600'}}>{payLabel[data.paymentMethod] || data.paymentMethod}</span>
+              </div>
+            </div>
+
+            <hr style={{border:'none', borderTop:'1px dashed var(--border)', margin:'12px 0'}}/>
+
+            <table style={{width:'100%', borderCollapse:'collapse', fontSize:'12px'}}>
+              <thead>
+                <tr style={{borderBottom:'1px solid var(--border)'}}>
+                  <th style={{textAlign:'right', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>الدواء</th>
+                  <th style={{textAlign:'center', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>الكمية</th>
+                  <th style={{textAlign:'left', padding:'4px 0', fontWeight:'700', color:'var(--text-muted)'}}>المبلغ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item, idx) => (
+                  <tr key={idx} style={{borderBottom:'1px dashed #f0f0f0'}}>
+                    <td style={{padding:'6px 0'}}>
+                      <div style={{fontWeight:'600'}}>{item.name}</div>
+                      {item.genericName && <div style={{fontSize:'10px', color:'var(--text-muted)'}}>{item.genericName}</div>}
+                    </td>
+                    <td style={{textAlign:'center', padding:'6px 0', color:'var(--text-secondary)'}}>
+                      {item.qty} {typeLabel[item.quantityType] || item.quantityType}
+                    </td>
+                    <td style={{textAlign:'left', padding:'6px 0', fontWeight:'600', color:'var(--primary)'}}>
+                      {calcItemTotal(item).toFixed(2)} ج
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{marginTop:'12px', paddingTop:'10px', borderTop:'2px solid var(--border)'}}>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:'18px', fontWeight:'800', color:'var(--primary)'}}>
+                <span>الإجمالي</span>
+                <span>{Number(data.total).toFixed(2)} ج</span>
+              </div>
+            </div>
+
+            <div style={{textAlign:'center', marginTop:'14px', fontSize:'11px', color:'var(--text-muted)'}}>
+              شكراً لثقتكم 🌿
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{gap:'10px', padding:'16px 24px'}}>
+          <button className="btn btn-ghost" onClick={onClose}>إغلاق</button>
+          <button className="btn btn-primary" style={{gap:'8px'}} onClick={handlePrint}>
+            🖨️ طباعة الفاتورة
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
