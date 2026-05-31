@@ -395,51 +395,51 @@ export function Reports() {
               
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 
-                {/* فلتر اليوم الواحد (مجرد إضافة جنب الفلاتر القديمة دون تعديل أبعاد) */}
-                <input 
-                  type="date" 
-                  className="form-control" 
-                  onChange={(e) => {
-                    if(e.target.value) {
-                      setStartDate(e.target.value);
-                      setEndDate(e.target.value);
-                    }
-                  }}
-                  max={new Date().toISOString().split('T')[0]}
-                  title="اختر يوماً واحداً"
-                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto', border: '1px solid var(--primary)' }}
-                />
+                {/* الزرار الجديد (اليوم) في نفس السطر وبنفس الارتفاع */}
+                <button 
+                  className="btn btn-outline" 
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setStartDate(today);
+                    setEndDate(today);
+                  }} 
+                  style={{ whiteSpace: 'nowrap', height: '38px', padding: '0 16px', fontWeight: '600' }}
+                >
+                  اليوم فقط
+                </button>
 
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>أو من:</span>
-                <input 
-                  type="date" 
-                  className="form-control" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
-                />
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>إلى:</span>
-                <input 
-                  type="date" 
-                  className="form-control" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
-                />
+                {/* الفلاتر القديمة زي ما هي بالظبط وبدون أي تعديل في الأبعاد */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg)', padding: '4px 8px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>من:</span>
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    value={startDate} 
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                  />
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>إلى:</span>
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    value={endDate} 
+                    onChange={(e) => setEndDate(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                  />
+                </div>
                 
                 <button 
                   className="btn btn-outline" 
                   onClick={printDailyReport} 
                   disabled={loadingDaily || dailyOperations.length === 0} 
-                  style={{ gap: '8px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}
+                  style={{ gap: '8px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', height: '38px' }}
                 >
                   <Printer size={16} /> طباعة التقرير
                 </button>
               </div>
             </div>
             
-            {/* رجعتلك البطاقات للتصميم الأصلي القديم (stat-card) عشان متترحّلش */}
             <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
               <div className="stat-card">
                 <div style={{background:'#fefcbf',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>🧾</div>
