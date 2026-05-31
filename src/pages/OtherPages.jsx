@@ -212,7 +212,6 @@ export function Attendance() {
 export function Reports() {
   const [tab, setTab] = useState('daily_detailed'); 
   
-  // تعديل: دعم تاريخ البداية والنهاية
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   
@@ -230,7 +229,6 @@ export function Reports() {
     const loadDaily = async () => {
       setLoadingDaily(true);
       try {
-        // نبعت startDate و endDate للباك إند
         const { data } = await getSales({ startDate, endDate, limit: 10000 });
         const sales = data.data || [];
         setDailyOperations(sales);
@@ -265,7 +263,7 @@ export function Reports() {
     loadHistory();
   }, [range, tab]);
 
-  // دالة الطباعة المتوافقة مع فترة تاريخية
+  // دالة الطباعة
   const printDailyReport = () => {
     if (dailyOperations.length === 0) {
       toast.error('لا توجد عمليات لطباعتها في هذه الفترة');
@@ -389,32 +387,46 @@ export function Reports() {
       {tab === 'daily_detailed' && (
         <>
           <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header" style={{ flexWrap: 'wrap', gap: '14px' }}>
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Calendar size={18} color="var(--primary)" />
                 <span className="card-title">حدد فترة التقرير</span>
               </div>
               
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg)', padding: '4px 8px', borderRadius: '8px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>من:</span>
-                  <input 
-                    type="date" 
-                    className="form-control" 
-                    value={startDate} 
-                    onChange={(e) => setStartDate(e.target.value)}
-                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
-                  />
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>إلى:</span>
-                  <input 
-                    type="date" 
-                    className="form-control" 
-                    value={endDate} 
-                    onChange={(e) => setEndDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
-                  />
-                </div>
+                
+                {/* فلتر اليوم الواحد (مجرد إضافة جنب الفلاتر القديمة دون تعديل أبعاد) */}
+                <input 
+                  type="date" 
+                  className="form-control" 
+                  onChange={(e) => {
+                    if(e.target.value) {
+                      setStartDate(e.target.value);
+                      setEndDate(e.target.value);
+                    }
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  title="اختر يوماً واحداً"
+                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto', border: '1px solid var(--primary)' }}
+                />
+
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>أو من:</span>
+                <input 
+                  type="date" 
+                  className="form-control" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>إلى:</span>
+                <input 
+                  type="date" 
+                  className="form-control" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                />
                 
                 <button 
                   className="btn btn-outline" 
@@ -427,21 +439,30 @@ export function Reports() {
               </div>
             </div>
             
-            {/* التعديل الجذري على تنسيق البطاقات لمنع ترحيل الكلمات */}
-            <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
-              <div style={{ flex: '1 1 200px', background: '#f8fafc', padding: '24px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>عدد العمليات</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>{dailySummary.count}</div>
+            {/* رجعتلك البطاقات للتصميم الأصلي القديم (stat-card) عشان متترحّلش */}
+            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
+              <div className="stat-card">
+                <div style={{background:'#fefcbf',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>🧾</div>
+                <div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>عدد العمليات</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800' }}>{dailySummary.count}</div>
+                </div>
               </div>
               
-              <div style={{ flex: '1 1 200px', background: '#f0fdf4', padding: '24px 16px', borderRadius: '12px', border: '1px solid #bbf7d0', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', color: 'var(--success)', marginBottom: '8px', fontWeight: '600' }}>إجمالي المبيعات</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--success)' }}>{dailySummary.total.toFixed(2)} ج</div>
+              <div className="stat-card">
+                <div style={{background:'#c6f6d5',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>💰</div>
+                <div>
+                  <div style={{ fontSize: '12px', color: 'var(--success)', marginBottom: '4px' }}>إجمالي المبيعات</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--success)' }}>{dailySummary.total.toFixed(2)} ج</div>
+                </div>
               </div>
               
-              <div style={{ flex: '1 1 200px', background: '#f0fdfa', padding: '24px 16px', borderRadius: '12px', border: '1px solid #5eead4', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', color: '#0f766e', marginBottom: '8px', fontWeight: '600' }}>صافي الربح</div>
-                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
+              <div className="stat-card">
+                <div style={{background:'#bee3f8',borderRadius:'var(--radius-sm)',width:'44px',height:'44px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'20px'}}>📈</div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#0f766e', marginBottom: '4px' }}>صافي الربح</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
+                </div>
               </div>
             </div>
 
