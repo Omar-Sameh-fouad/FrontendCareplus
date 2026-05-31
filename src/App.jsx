@@ -34,10 +34,10 @@ function AppRoutes() {
       <Route path="/users" element={<RequireAuth roles={['admin']}><Users /></RequireAuth>} />
       <Route path="/suppliers" element={<RequireAuth roles={['admin','pharmacist']}><Suppliers /></RequireAuth>} />
       <Route path="/attendance" element={<RequireAuth><Attendance /></RequireAuth>} />
-      <Route path="/reports" element={<RequireAuth roles={['admin','pharmacist']}><Reports /></RequireAuth>} />
+      {/* تم التعديل هنا للسماح للأدمن فقط بالدخول لصفحة التقارير */}
+      <Route path="/reports" element={<RequireAuth roles={['admin']}><Reports /></RequireAuth>} />
       <Route path="/notifications" element={<RequireAuth roles={['admin','pharmacist']}><Notifications /></RequireAuth>} />
       <Route path="/logs" element={<RequireAuth roles={['admin']}><Logs /></RequireAuth>} />
-      {/* تم التعديل هنا للسماح للصيدلي بالدخول لصفحة الإعدادات */}
       <Route path="/settings" element={<RequireAuth roles={['admin', 'pharmacist']}><Settings /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
