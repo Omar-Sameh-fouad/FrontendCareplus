@@ -360,7 +360,7 @@ export function Reports() {
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>رقابة شاملة على المبيعات والأرباح</p>
         </div>
         
-        <div style={{ display:'flex', background:'var(--bg)', borderRadius:'10px', padding:'4px' }}>
+        <div style={{ display:'flex', background:'var(--bg)', borderRadius:'10px', padding:'4px', overflowX: 'auto' }}>
           {[
             { id: 'daily_detailed', label: 'التقرير اليومي المفصل' },
             { id: 'historical', label: 'تحليل الفترات (رسم بياني)' }
@@ -368,6 +368,8 @@ export function Reports() {
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding:'8px 20px', borderRadius:'8px', border:'none', cursor:'pointer',
               fontFamily:'Cairo,sans-serif', fontWeight:'600', fontSize:'13px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               background: tab === t.id ? 'white' : 'transparent',
               color: tab === t.id ? 'var(--primary)' : 'var(--text-muted)',
               boxShadow: tab === t.id ? 'var(--shadow-sm)' : 'none',
@@ -385,15 +387,21 @@ export function Reports() {
                 <Calendar size={18} color="var(--primary)" />
                 <span className="card-title">اختر اليوم لعرض التقرير</span>
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input 
                   type="date" 
                   className="form-control" 
                   value={selectedDate} 
                   onChange={(e) => setSelectedDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
+                  style={{ minWidth: '140px' }}
                 />
-                <button className="btn btn-outline" onClick={printDailyReport} disabled={loadingDaily || dailyOperations.length === 0} style={{ gap: '8px' }}>
+                <button 
+                  className="btn btn-outline" 
+                  onClick={printDailyReport} 
+                  disabled={loadingDaily || dailyOperations.length === 0} 
+                  style={{ gap: '8px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}
+                >
                   <Printer size={16} /> طباعة التقرير
                 </button>
               </div>
