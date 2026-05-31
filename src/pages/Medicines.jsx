@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers, analyzeMedicineImage } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, Package, Camera, ImagePlus, X as XIcon, Send, AlertCircle } from 'lucide-react';
+import imageCompression from 'browser-image-compression'; // 👈 استدعاء مكتبة الضغط
 
 const emptyForm = {
   name:'', barcode:'', expiryDate:'', quantity:0, purchasePrice:0,
@@ -53,8 +54,9 @@ export default function Medicines() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   
-  // 👇 حالة الرفع والتحليل بالذكاء الاصطناعي
+  // حالة الرفع والتحليل بالذكاء الاصطناعي
   const [analyzing, setAnalyzing] = useState(false);
+  const [compressing, setCompressing] = useState(false); // 👈 حالة الضغط الجديدة
   const [selectedImages, setSelectedImages] = useState([]);
 
   const load = useCallback(async (page=1) => {
@@ -95,13 +97,49 @@ export default function Medicines() {
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ في الحذف'); }
   };
 
-  // 👇 إضافة صور للـ preview
-  const handleAddImages = (e) => {
+  // 👈 دالة إضافة الصور معدلة بالضغط
+  const handleAddImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    const newImgs = files.map(file => ({ file, previewUrl: URL.createObjectURL(file), id: Math.random().toString(36).slice(2) }));
-    setSelectedImages(prev => [...prev, ...newImgs]);
-    e.target.value = '';
+
+    setCompressing(true);
+    const toastId = toast.loading('جاري ضغط وتجهيز الصور... ⏳');
+
+    const options = {
+      maxSizeMB: 1,             // أقصى حجم للصورة 1 ميجا
+      maxWidthOrHeight: 1920,   // أقصى أبعاد عشان نحافظ على الجودة
+      useWebWorker: true        // عشان المتصفح مايهنجش
+    };
+
+    try {
+      const compressedPromises = files.map(async (file) => {
+        try {
+          const compressedFile = await imageCompression(file, options);
+          return { 
+            file: compressedFile, 
+            previewUrl: URL.createObjectURL(compressedFile), 
+            id: Math.random().toString(36).slice(2) 
+          };
+        } catch (err) {
+          console.error('فشل ضغط صورة، هيتم استخدام الأصلية', err);
+          return { 
+            file, 
+            previewUrl: URL.createObjectURL(file), 
+            id: Math.random().toString(36).slice(2) 
+          };
+        }
+      });
+
+      const newImgs = await Promise.all(compressedPromises);
+      setSelectedImages(prev => [...prev, ...newImgs]);
+      
+      toast.success('تم تجهيز الصور بنجاح', { id: toastId });
+    } catch (error) {
+      toast.error('حصلت مشكلة أثناء تجهيز الصور', { id: toastId });
+    } finally {
+      setCompressing(false);
+      e.target.value = ''; // تفريغ الـ input
+    }
   };
 
   const removeImage = (id) => {
@@ -138,7 +176,7 @@ export default function Medicines() {
     } finally { setAnalyzing(false); }
   };
 
-    const filtered = medicines.filter(m =>
+  const filtered = medicines.filter(m =>
     m.name?.toLowerCase().includes(search.toLowerCase()) ||
     m.barcode?.includes(search)
   );
@@ -231,14 +269,13 @@ export default function Medicines() {
             </div>
             <div className="modal-body">
               
-              {/* ✨ منطقة الذكاء الاصطناعي */}
+              {/* منطقة الذكاء الاصطناعي */}
               <div style={{ marginBottom: '20px', background: 'linear-gradient(135deg,#f0faf8,#e8f5f2)', border: '1.5px solid #a7d9d0', borderRadius: 'var(--radius)', padding: '16px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
                   <span style={{ fontSize:'16px' }}>✨</span>
                   <span style={{ fontWeight:'700', fontSize:'14px', color:'var(--primary-dark)' }}>تعبئة تلقائية بالذكاء الاصطناعي</span>
                 </div>
 
-                {/* رسالة إرشادية */}
                 <div style={{ display:'flex', alignItems:'flex-start', gap:'8px', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'8px', padding:'10px 12px', marginBottom:'12px' }}>
                   <AlertCircle size={15} color="#d97706" style={{ flexShrink:0, marginTop:'1px' }} />
                   <p style={{ fontSize:'12px', color:'#92400e', lineHeight:'1.6', margin:0 }}>
@@ -246,19 +283,18 @@ export default function Medicines() {
                   </p>
                 </div>
 
-                {/* زراير الإضافة */}
+                {/* 👈 تعديل أزرار الرفع لتعطيلها أثناء الضغط */}
                 <div style={{ display:'flex', gap:'8px', marginBottom: selectedImages.length > 0 ? '12px' : '0' }}>
-                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor:'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
-                    <input type="file" accept="image/*" capture="environment" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing} />
+                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor: (analyzing || compressing) ? 'not-allowed' : 'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
+                    <input type="file" accept="image/*" capture="environment" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing || compressing} />
                     <Camera size={16} /> تصوير
                   </label>
-                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor:'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
-                    <input type="file" accept="image/*" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing} />
+                  <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor: (analyzing || compressing) ? 'not-allowed' : 'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
+                    <input type="file" accept="image/*" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing || compressing} />
                     <ImagePlus size={16} /> من الصور
                   </label>
                 </div>
 
-                {/* Preview */}
                 {selectedImages.length > 0 && (
                   <div>
                     {selectedImages.length < 5 && (
@@ -279,7 +315,7 @@ export default function Medicines() {
                         </div>
                       ))}
                     </div>
-                    <button onClick={handleAnalyze} disabled={analyzing} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'10px', borderRadius:'8px', border:'none', background: analyzing ? 'var(--border)' : 'var(--primary)', color: analyzing ? 'var(--text-muted)' : 'white', fontFamily:'Cairo', fontWeight:'700', fontSize:'14px', cursor: analyzing ? 'not-allowed' : 'pointer' }}>
+                    <button onClick={handleAnalyze} disabled={analyzing || compressing} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'10px', borderRadius:'8px', border:'none', background: (analyzing || compressing) ? 'var(--border)' : 'var(--primary)', color: (analyzing || compressing) ? 'var(--text-muted)' : 'white', fontFamily:'Cairo', fontWeight:'700', fontSize:'14px', cursor: (analyzing || compressing) ? 'not-allowed' : 'pointer' }}>
                       {analyzing
                         ? <><span className="spinner" style={{ width:'16px', height:'16px' }} /> جاري التحليل...</>
                         : <><Send size={15} /> تحليل {selectedImages.length} {selectedImages.length === 1 ? 'صورة' : 'صور'} بالذكاء الاصطناعي</>
@@ -311,7 +347,7 @@ export default function Medicines() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
-              <button className="btn btn-primary" disabled={saving || analyzing} onClick={handleSave}>
+              <button className="btn btn-primary" disabled={saving || analyzing || compressing} onClick={handleSave}>
                 {saving?<span className="spinner"/>:(editing?'حفظ التعديلات':'إضافة الدواء')}
               </button>
             </div>
