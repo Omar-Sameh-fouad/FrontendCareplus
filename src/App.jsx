@@ -37,7 +37,8 @@ function AppRoutes() {
       <Route path="/reports" element={<RequireAuth roles={['admin','pharmacist']}><Reports /></RequireAuth>} />
       <Route path="/notifications" element={<RequireAuth roles={['admin','pharmacist']}><Notifications /></RequireAuth>} />
       <Route path="/logs" element={<RequireAuth roles={['admin']}><Logs /></RequireAuth>} />
-      <Route path="/settings" element={<RequireAuth roles={['admin']}><Settings /></RequireAuth>} />
+      {/* تم التعديل هنا للسماح للصيدلي بالدخول لصفحة الإعدادات */}
+      <Route path="/settings" element={<RequireAuth roles={['admin', 'pharmacist']}><Settings /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
