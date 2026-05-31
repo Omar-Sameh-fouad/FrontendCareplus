@@ -8,6 +8,28 @@ const emptyForm = { username:'', fullName:'', email:'', phone:'', role:'cashier'
 const roles = { admin:'مدير', pharmacist:'صيدلي', cashier:'كاشير' };
 const roleBadge = { admin:'badge-danger', pharmacist:'badge-info', cashier:'badge-success' };
 
+// تم استخراج المكون خارج الـ Component الرئيسي لتجنب فقدان الـ Focus
+const F = ({ label, name, type='text', form, setForm, ...rest }) => {
+  const handleChange = (e) => {
+    let val = e.target.value;
+    if (type === 'number') val = parseInt(val) || 0;
+    setForm({ ...form, [name]: val });
+  };
+
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {type === 'select' ? (
+        <select className="form-control" value={form[name]} onChange={handleChange} {...rest}>
+          {rest.children}
+        </select>
+      ) : (
+        <input className="form-control" type={type} value={form[name]} onChange={handleChange} {...rest} />
+      )}
+    </div>
+  );
+};
+
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,20 +70,6 @@ export default function Users() {
   const filtered = users.filter(u =>
     u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
     u.username?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const F = ({ label, name, type='text', ...rest }) => (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      {type === 'select' ? (
-        <select className="form-control" value={form[name]} onChange={e=>setForm({...form,[name]:e.target.value})} {...rest}>
-          {rest.children}
-        </select>
-      ) : (
-        <input className="form-control" type={type} value={form[name]}
-          onChange={e=>setForm({...form,[name]:type==='number'?parseInt(e.target.value)||0:e.target.value})} {...rest} />
-      )}
-    </div>
   );
 
   return (
@@ -131,18 +139,18 @@ export default function Users() {
             </div>
             <div className="modal-body">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 20px'}}>
-                <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل"/>
-                <F label="اسم المستخدم *" name="username" placeholder="username"/>
-                <F label="البريد الإلكتروني" name="email" type="email" placeholder="email@example.com"/>
-                <F label="رقم الهاتف" name="phone" placeholder="01xxxxxxxxx"/>
-                <F label="الدور *" name="role" type="select">
+                <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل" form={form} setForm={setForm} />
+                <F label="اسم المستخدم *" name="username" placeholder="username" form={form} setForm={setForm} />
+                <F label="البريد الإلكتروني" name="email" type="email" placeholder="email@example.com" form={form} setForm={setForm} />
+                <F label="رقم الهاتف" name="phone" placeholder="01xxxxxxxxx" form={form} setForm={setForm} />
+                <F label="الدور *" name="role" type="select" form={form} setForm={setForm}>
                   <option value="cashier">كاشير</option>
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
-                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="كلمة المرور"/>
-                <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24"/>
-                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31"/>
+                <F label={editing?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور *'} name="password" type="password" placeholder="كلمة المرور" form={form} setForm={setForm} />
+                <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} />
+                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} />
               </div>
               {editing && (
                 <div className="form-group">

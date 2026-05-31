@@ -10,6 +10,37 @@ const emptyForm = {
   pillCount:0, stripCount:0, manufacturer:'', genericName:'', medicineForm:''
 };
 
+// تم استخراج المكون لحل مشكلة فقدان الـ Focus أثناء كتابة الأدوية
+const F = ({ label, name, type='text', form, setForm, ...rest }) => {
+  const handleChange = (e) => {
+    if (type === 'checkbox') {
+      setForm({ ...form, [name]: e.target.checked });
+    } else {
+      let val = e.target.value;
+      if (type === 'number') val = parseFloat(val) || 0;
+      setForm({ ...form, [name]: val });
+    }
+  };
+
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {type === 'select' ? (
+        <select className="form-control" value={form[name]} onChange={handleChange} {...rest}>
+          {rest.children}
+        </select>
+      ) : type === 'checkbox' ? (
+        <label style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}}>
+          <input type="checkbox" checked={form[name]} onChange={handleChange} style={{width:'16px',height:'16px'}} />
+          <span style={{fontSize:'14px'}}>{rest.checkLabel}</span>
+        </label>
+      ) : (
+        <input className="form-control" type={type} value={form[name]} onChange={handleChange} {...rest} />
+      )}
+    </div>
+  );
+};
+
 export default function Medicines() {
   const [medicines, setMedicines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -71,25 +102,6 @@ export default function Medicines() {
     if (diff <= 30) return { label:'ينتهي قريباً', cls:'badge-warning' };
     return { label:'صالح', cls:'badge-success' };
   };
-
-  const F = ({ label, name, type='text', ...rest }) => (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      {type === 'select' ? (
-        <select className="form-control" value={form[name]} onChange={e=>setForm({...form,[name]:e.target.value})} {...rest}>
-          {rest.children}
-        </select>
-      ) : type === 'checkbox' ? (
-        <label style={{display:'flex',alignItems:'center',gap:'8px',cursor:'pointer'}}>
-          <input type="checkbox" checked={form[name]} onChange={e=>setForm({...form,[name]:e.target.checked})} style={{width:'16px',height:'16px'}} />
-          <span style={{fontSize:'14px'}}>{rest.checkLabel}</span>
-        </label>
-      ) : (
-        <input className="form-control" type={type} value={form[name]}
-          onChange={e=>setForm({...form,[name]:type==='number'?parseFloat(e.target.value)||0:e.target.value})} {...rest} />
-      )}
-    </div>
-  );
 
   return (
     <div className="animate-in">
@@ -172,23 +184,23 @@ export default function Medicines() {
             </div>
             <div className="modal-body">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 20px'}}>
-                <F label="اسم الدواء *" name="name" placeholder="أدخل اسم الدواء" />
-                <F label="الباركود *" name="barcode" placeholder="الباركود" />
-                <F label="الاسم العلمي" name="genericName" placeholder="Generic Name" />
-                <F label="الشكل الدوائي" name="medicineForm" placeholder="أقراص / كبسول / شراب..." />
-                <F label="الشركة المصنعة" name="manufacturer" placeholder="اسم الشركة" />
-                <F label="تاريخ الانتهاء *" name="expiryDate" type="date" />
-                <F label="الكمية *" name="quantity" type="number" min="0" />
-                <F label="سعر الشراء *" name="purchasePrice" type="number" min="0" step="0.01" />
-                <F label="سعر البيع *" name="sellingPrice" type="number" min="0" step="0.01" />
-                <F label="المورد" name="supplierId" type="select">
+                <F label="اسم الدواء *" name="name" placeholder="أدخل اسم الدواء" form={form} setForm={setForm} />
+                <F label="الباركود *" name="barcode" placeholder="الباركود" form={form} setForm={setForm} />
+                <F label="الاسم العلمي" name="genericName" placeholder="Generic Name" form={form} setForm={setForm} />
+                <F label="الشكل الدوائي" name="medicineForm" placeholder="أقراص / كبسول / شراب..." form={form} setForm={setForm} />
+                <F label="الشركة المصنعة" name="manufacturer" placeholder="اسم الشركة" form={form} setForm={setForm} />
+                <F label="تاريخ الانتهاء *" name="expiryDate" type="date" form={form} setForm={setForm} />
+                <F label="الكمية *" name="quantity" type="number" min="0" form={form} setForm={setForm} />
+                <F label="سعر الشراء *" name="purchasePrice" type="number" min="0" step="0.01" form={form} setForm={setForm} />
+                <F label="سعر البيع *" name="sellingPrice" type="number" min="0" step="0.01" form={form} setForm={setForm} />
+                <F label="المورد" name="supplierId" type="select" form={form} setForm={setForm}>
                   <option value="">-- بدون مورد --</option>
                   {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </F>
-                <F label="عدد الأقراص في الشريط" name="pillCount" type="number" min="0" />
-                <F label="عدد الشرائط في العلبة" name="stripCount" type="number" min="0" />
+                <F label="عدد الأقراص في الشريط" name="pillCount" type="number" min="0" form={form} setForm={setForm} />
+                <F label="عدد الشرائط في العلبة" name="stripCount" type="number" min="0" form={form} setForm={setForm} />
               </div>
-              <F label="يستلزم وصفة طبية" name="requiresPrescription" type="checkbox" checkLabel="نعم، يستلزم وصفة طبية" />
+              <F label="يستلزم وصفة طبية" name="requiresPrescription" type="checkbox" checkLabel="نعم، يستلزم وصفة طبية" form={form} setForm={setForm} />
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
