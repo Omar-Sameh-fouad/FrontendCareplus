@@ -8,7 +8,7 @@ import { getLogs } from '../api';
 import { setupSecurity, getSecurity, dailyClosing, downloadBackup } from '../api';
 import { useAuth } from '../AuthContext';
 import toast from 'react-hot-toast';
-import { Plus, Truck, Trash2, LogIn, LogOut, Bell, AlertTriangle, Package, Shield, Download, Search, Printer, Calendar } from 'lucide-react';
+import { Plus, Truck, Trash2, LogIn, LogOut, Bell, AlertTriangle, Package, Shield, Download, Printer, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // =================== Suppliers ===================
@@ -212,7 +212,10 @@ export function Attendance() {
 export function Reports() {
   const [tab, setTab] = useState('daily_detailed'); 
   
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // تعديل: دعم تاريخ البداية والنهاية
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  
   const [dailyOperations, setDailyOperations] = useState([]);
   const [dailySummary, setDailySummary] = useState({ total: 0, profit: 0, count: 0 });
   const [loadingDaily, setLoadingDaily] = useState(false);
@@ -221,12 +224,14 @@ export function Reports() {
   const [historicalData, setHistoricalData] = useState(null);
   const [loadingHistorical, setLoadingHistorical] = useState(true);
 
+  // جلب الفترات للتقرير المفصل
   useEffect(() => {
     if (tab !== 'daily_detailed') return;
     const loadDaily = async () => {
       setLoadingDaily(true);
       try {
-        const { data } = await getSales({ date: selectedDate, limit: 1000 });
+        // نبعت startDate و endDate للباك إند
+        const { data } = await getSales({ startDate, endDate, limit: 10000 });
         const sales = data.data || [];
         setDailyOperations(sales);
         
@@ -235,14 +240,15 @@ export function Reports() {
         
         setDailySummary({ total: tSales, profit: tProfit, count: sales.length });
       } catch (err) {
-        toast.error('فشل تحميل تقرير اليوم المختار');
+        toast.error('فشل تحميل تقرير الفترة المختارة');
       } finally {
         setLoadingDaily(false);
       }
     };
     loadDaily();
-  }, [selectedDate, tab]);
+  }, [startDate, endDate, tab]);
 
+  // جلب الرسم البياني
   useEffect(() => {
     if (tab !== 'historical') return;
     const loadHistory = async () => {
@@ -259,9 +265,10 @@ export function Reports() {
     loadHistory();
   }, [range, tab]);
 
+  // دالة الطباعة المتوافقة مع فترة تاريخية
   const printDailyReport = () => {
     if (dailyOperations.length === 0) {
-      toast.error('لا توجد عمليات لطباعتها في هذا اليوم');
+      toast.error('لا توجد عمليات لطباعتها في هذه الفترة');
       return;
     }
 
@@ -269,7 +276,7 @@ export function Reports() {
       <tr>
         <td class="num">${idx + 1}</td>
         <td>${op.id.slice(0, 8).toUpperCase()}</td>
-        <td>${new Date(op.ts).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</td>
+        <td>${new Date(op.ts).toLocaleString('ar-EG', {month: 'numeric', day: 'numeric', hour:'2-digit', minute:'2-digit'})}</td>
         <td>${op.cashierName || 'غير معروف'}</td>
         <td class="price">${Number(op.total).toFixed(2)} ج</td>
         <td class="profit">${Number(op.profit).toFixed(2)} ج</td>
@@ -281,7 +288,7 @@ export function Reports() {
       <html dir="rtl">
       <head>
         <meta charset="UTF-8">
-        <title>تقرير يوم ${selectedDate}</title>
+        <title>تقرير المبيعات</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
           body { font-family: 'Cairo', sans-serif; padding: 20px; color: #111; }
@@ -308,7 +315,7 @@ export function Reports() {
       <body>
         <div class="header">
           <h1>التقرير المالي المفصل</h1>
-          <p>تاريخ التقرير: ${new Date(selectedDate).toLocaleDateString('ar-EG')}</p>
+          <p>الفترة: من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}</p>
         </div>
         
         <div class="summary">
@@ -331,7 +338,7 @@ export function Reports() {
             <tr>
               <th class="num">#</th>
               <th>رقم الفاتورة</th>
-              <th>الوقت</th>
+              <th>التاريخ والوقت</th>
               <th>المستخدم (الكاشير)</th>
               <th>المبيعات</th>
               <th>صافي الربح</th>
@@ -362,7 +369,7 @@ export function Reports() {
         
         <div style={{ display:'flex', background:'var(--bg)', borderRadius:'10px', padding:'4px', overflowX: 'auto' }}>
           {[
-            { id: 'daily_detailed', label: 'التقرير اليومي المفصل' },
+            { id: 'daily_detailed', label: 'التقرير المفصل للفترات' },
             { id: 'historical', label: 'تحليل الفترات (رسم بياني)' }
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -382,20 +389,33 @@ export function Reports() {
       {tab === 'daily_detailed' && (
         <>
           <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Calendar size={18} color="var(--primary)" />
-                <span className="card-title">اختر اليوم لعرض التقرير</span>
+                <span className="card-title">حدد فترة التقرير</span>
               </div>
+              
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <input 
-                  type="date" 
-                  className="form-control" 
-                  value={selectedDate} 
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                  style={{ minWidth: '140px' }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg)', padding: '4px 8px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>من:</span>
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    value={startDate} 
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                  />
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>إلى:</span>
+                  <input 
+                    type="date" 
+                    className="form-control" 
+                    value={endDate} 
+                    onChange={(e) => setEndDate(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    style={{ minWidth: '130px', padding: '4px 8px', height: 'auto' }}
+                  />
+                </div>
+                
                 <button 
                   className="btn btn-outline" 
                   onClick={printDailyReport} 
@@ -407,18 +427,21 @@ export function Reports() {
               </div>
             </div>
             
-            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
-              <div className="stat-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>عدد العمليات</div>
-                <div style={{ fontSize: '24px', fontWeight: '800' }}>{dailySummary.count}</div>
+            {/* التعديل الجذري على تنسيق البطاقات لمنع ترحيل الكلمات */}
+            <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '20px' }}>
+              <div style={{ flex: '1 1 200px', background: '#f8fafc', padding: '24px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>عدد العمليات</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>{dailySummary.count}</div>
               </div>
-              <div className="stat-card" style={{ background: '#f0fdf4', padding: '16px', borderRadius: '10px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--success)', marginBottom: '4px' }}>إجمالي المبيعات</div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--success)' }}>{dailySummary.total.toFixed(2)} ج</div>
+              
+              <div style={{ flex: '1 1 200px', background: '#f0fdf4', padding: '24px 16px', borderRadius: '12px', border: '1px solid #bbf7d0', textAlign: 'center' }}>
+                <div style={{ fontSize: '14px', color: 'var(--success)', marginBottom: '8px', fontWeight: '600' }}>إجمالي المبيعات</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--success)' }}>{dailySummary.total.toFixed(2)} ج</div>
               </div>
-              <div className="stat-card" style={{ background: '#f0fdfa', padding: '16px', borderRadius: '10px', border: '1px solid #14b8a6' }}>
-                <div style={{ fontSize: '13px', color: '#0f766e', marginBottom: '4px' }}>صافي الربح</div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
+              
+              <div style={{ flex: '1 1 200px', background: '#f0fdfa', padding: '24px 16px', borderRadius: '12px', border: '1px solid #5eead4', textAlign: 'center' }}>
+                <div style={{ fontSize: '14px', color: '#0f766e', marginBottom: '8px', fontWeight: '600' }}>صافي الربح</div>
+                <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f766e' }}>{dailySummary.profit.toFixed(2)} ج</div>
               </div>
             </div>
 
@@ -429,14 +452,14 @@ export function Reports() {
                 </div>
               ) : dailyOperations.length === 0 ? (
                 <div className="empty-state" style={{ padding: '40px' }}>
-                  <p>لا توجد عمليات مسجلة في هذا اليوم.</p>
+                  <p>لا توجد عمليات مسجلة في هذه الفترة.</p>
                 </div>
               ) : (
                 <table style={{ width: '100%', textAlign: 'right' }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1 }}>
                     <tr>
                       <th>الكود</th>
-                      <th>الوقت</th>
+                      <th>التاريخ والوقت</th>
                       <th>المستخدم (الكاشير)</th>
                       <th>طريقة الدفع</th>
                       <th>إجمالي الفاتورة</th>
@@ -447,7 +470,7 @@ export function Reports() {
                     {dailyOperations.map(op => (
                       <tr key={op.id}>
                         <td><code style={{ fontSize: '11px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '4px' }}>{op.id.slice(0, 8).toUpperCase()}</code></td>
-                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(op.ts).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</td>
+                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(op.ts).toLocaleString('ar-EG', {month: 'short', day: 'numeric', hour:'2-digit', minute:'2-digit'})}</td>
                         <td style={{ fontWeight: '600' }}>{op.cashierName || '—'}</td>
                         <td><span className="badge badge-gray">{op.paymentMethod}</span></td>
                         <td style={{ fontWeight: '700', color: 'var(--primary)' }}>{Number(op.total).toFixed(2)} ج</td>
