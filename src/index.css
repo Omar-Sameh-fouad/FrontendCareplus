@@ -512,3 +512,47 @@ tbody tr:hover { background:#f8fafb; }
     padding-bottom: 80px !important;
   }
 }
+
+/* ─── Dashboard Layout ───────────────────────────── */
+.stats-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+.dashboard-bottom {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 769px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 12px !important;
+    gap: 10px !important;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stat-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .stat-value {
+    font-size: 17px !important;
+  }
+  .stat-label { font-size: 11px !important; }
+  .stat-sub   { font-size: 10px !important; }
+
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

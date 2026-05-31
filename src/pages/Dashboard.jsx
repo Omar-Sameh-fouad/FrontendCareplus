@@ -29,7 +29,7 @@ export default function Dashboard() {
   const urgentCount = alerts.filter(a => a.urgent).length;
 
   if (loading) return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'20px' }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'16px' }}>
       {[...Array(4)].map((_, i) => (
         <div key={i} className="skeleton" style={{ height:'110px', borderRadius:'var(--radius)' }} />
       ))}
@@ -46,11 +46,11 @@ export default function Dashboard() {
   return (
     <div className="animate-in">
       {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: 'clamp(18px, 5vw, 24px)', fontWeight: '800', color: 'var(--text-primary)' }}>
           {greeting()}، {user?.fullName || user?.username} 👋
         </h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '13px' }}>
           {new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
         </p>
       </div>
@@ -60,21 +60,28 @@ export default function Dashboard() {
         <div style={{
           background: 'linear-gradient(135deg, #fffaf0, #fef8e7)',
           border: '1px solid #f6d860', borderRadius: 'var(--radius)',
-          padding: '14px 20px', marginBottom: '24px',
-          display: 'flex', alignItems: 'center', gap: '12px'
+          padding: '12px 16px', marginBottom: '20px',
+          display: 'flex', alignItems: 'center', gap: '10px'
         }}>
-          <AlertTriangle size={20} color="#dd6b20" />
-          <span style={{ fontWeight: '600', color: '#744210' }}>
+          <AlertTriangle size={18} color="#dd6b20" />
+          <span style={{ fontWeight: '600', color: '#744210', fontSize: '13px' }}>
             يوجد {urgentCount} تنبيه عاجل يحتاج إلى انتباهك
           </span>
         </div>
       )}
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+      {/* Stats - 2x2 on mobile, 4 cols on desktop */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '12px',
+        marginBottom: '20px'
+      }}
+        className="stats-grid"
+      >
         <div className="stat-card">
           <div className="stat-icon" style={{ background: '#c6f6d5' }}>
-            <DollarSign size={22} color="#276749" />
+            <DollarSign size={20} color="#276749" />
           </div>
           <div className="stat-info">
             <div className="stat-label">إجمالي الوردية</div>
@@ -84,7 +91,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: '#bee3f8' }}>
-            <ShoppingCart size={22} color="#2c5282" />
+            <ShoppingCart size={20} color="#2c5282" />
           </div>
           <div className="stat-info">
             <div className="stat-label">مبيعات نقدي</div>
@@ -94,7 +101,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: '#e9d8fd' }}>
-            <TrendingUp size={22} color="#553c9a" />
+            <TrendingUp size={20} color="#553c9a" />
           </div>
           <div className="stat-info">
             <div className="stat-label">كارت / محفظة</div>
@@ -104,7 +111,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: urgentCount > 0 ? '#fed7d7' : '#fefcbf' }}>
-            <Bell size={22} color={urgentCount > 0 ? '#c53030' : '#744210'} />
+            <Bell size={20} color={urgentCount > 0 ? '#c53030' : '#744210'} />
           </div>
           <div className="stat-info">
             <div className="stat-label">التنبيهات</div>
@@ -114,29 +121,29 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Chart + Alerts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', alignItems: 'start' }}>
+      {/* Chart + Alerts - stack on mobile */}
+      <div className="dashboard-bottom">
         {/* Chart */}
         <div className="card">
           <div className="card-header">
             <span className="card-title">📊 المبيعات (آخر أسبوع)</span>
           </div>
-          <div className="card-body">
+          <div className="card-body" style={{ padding: '16px' }}>
             {history.length === 0 ? (
               <div className="empty-state" style={{ padding: '40px 20px' }}>
                 <Package size={40} />
                 <p>لا توجد بيانات للأسبوع الماضي</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={history} margin={{ top:0, right:0, left:0, bottom:0 }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={history} margin={{ top:0, right:0, left:-20, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f3" />
-                  <XAxis dataKey="date" tick={{ fontSize:12, fontFamily:'Cairo' }}
+                  <XAxis dataKey="date" tick={{ fontSize:11, fontFamily:'Cairo' }}
                     tickFormatter={d => new Date(d).toLocaleDateString('ar-EG', { weekday:'short' })} />
-                  <YAxis tick={{ fontSize:12, fontFamily:'Cairo' }} />
+                  <YAxis tick={{ fontSize:11, fontFamily:'Cairo' }} />
                   <Tooltip
                     formatter={(v) => [`${v.toFixed(0)} ج`, 'المبيعات']}
-                    contentStyle={{ fontFamily:'Cairo', borderRadius:'8px', border:'1px solid #e2e8f0' }}
+                    contentStyle={{ fontFamily:'Cairo', borderRadius:'8px', border:'1px solid #e2e8f0', fontSize:'12px' }}
                   />
                   <Bar dataKey="total" fill="var(--primary)" radius={[6,6,0,0]} />
                 </BarChart>
@@ -146,7 +153,7 @@ export default function Dashboard() {
         </div>
 
         {/* Alerts */}
-        <div className="card" style={{ maxHeight:'380px', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <div className="card" style={{ overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'360px' }}>
           <div className="card-header">
             <span className="card-title">🔔 آخر التنبيهات</span>
             {alerts.length > 0 && <span className="badge badge-danger">{alerts.length}</span>}
