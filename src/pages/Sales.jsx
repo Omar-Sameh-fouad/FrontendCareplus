@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { searchMedicine, searchMedicineByName, createSale, getSales } from '../api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle } from 'lucide-react';
-import { useEffect } from 'react';
 
 export default function Sales() {
   const [tab, setTab] = useState('pos');
@@ -44,10 +44,8 @@ function POS() {
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // هل الإدخال باركود (أرقام فقط) أم اسم؟
   const isBarcode = (val) => /^\d+$/.test(val.trim());
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handler = (e) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target) &&
@@ -59,7 +57,6 @@ function POS() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Debounced name search — بس لو مش باركود
   useEffect(() => {
     if (!query.trim() || isBarcode(query)) { setSuggestions([]); setShowSuggestions(false); return; }
     if (query.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
@@ -98,10 +95,9 @@ function POS() {
     inputRef.current?.focus();
   };
 
-  // Enter أو scan باركود
   const searchAndAdd = async () => {
     if (!query.trim()) return;
-    if (!isBarcode(query)) return; // الاسم بيتعمل عبر الـ dropdown
+    if (!isBarcode(query)) return;
     try {
       const { data } = await searchMedicine(query.trim());
       addToCart(data);
@@ -152,7 +148,6 @@ function POS() {
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:'20px', alignItems:'start' }}>
-      {/* Left: Cart */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">🛍️ السلة</span>
@@ -185,14 +180,12 @@ function POS() {
               </button>
             </div>
 
-            {/* hint صغير */}
             {query && (
               <div style={{fontSize:'11px',color:'var(--text-muted)',marginTop:'5px',paddingRight:'4px'}}>
                 {isBarcode(query) ? '🔖 باركود — اضغط Enter للإضافة' : '🔍 بحث بالاسم — اختر من القائمة'}
               </div>
             )}
 
-            {/* Suggestions Dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div ref={suggestionsRef} style={{
                 position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
@@ -227,7 +220,6 @@ function POS() {
               </div>
             )}
 
-            {/* No results */}
             {showSuggestions && suggestions.length === 0 && query.length >= 2 && !isBarcode(query) && !searching && (
               <div style={{
                 position:'absolute', top:'calc(100% + 4px)', right:0, left:0, zIndex:200,
@@ -281,7 +273,6 @@ function POS() {
         )}
       </div>
 
-      {/* Right: Checkout */}
       <div style={{display:'flex',flexDirection:'column',gap:'16px',position:'sticky',top:'28px'}}>
         <div className="card">
           <div className="card-header"><span className="card-title">💳 إتمام الدفع</span></div>
@@ -314,8 +305,7 @@ function POS() {
         </div>
       </div>
 
-      {/* Interaction Warning Modal */}
-      {interactionWarning && (
+      {interactionWarning && createPortal(
         <div className="modal-overlay">
           <div className="modal" style={{maxWidth:'480px'}}>
             <div className="modal-header">
@@ -337,7 +327,8 @@ function POS() {
               <button className="btn btn-danger" onClick={()=>checkout(true)}>المتابعة رغم التحذير</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

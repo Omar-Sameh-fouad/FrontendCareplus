@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getSuppliers, addSupplier, deleteSupplier } from '../api';
 import { checkIn, checkOut, getAttendanceReport, getUsers } from '../api';
 import { getHistoricalReport, getTodayReport } from '../api';
@@ -80,7 +81,7 @@ export function Suppliers() {
           )}
         </div>
       </div>
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
           <div className="modal">
             <div className="modal-header"><span className="modal-title">إضافة مورد</span><button className="btn btn-ghost btn-icon" onClick={()=>setShowModal(false)}>✕</button></div>
@@ -103,9 +104,10 @@ export function Suppliers() {
               <button className="btn btn-primary" disabled={saving} onClick={handleSave}>{saving?<span className="spinner"/>:'إضافة المورد'}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      {deleteId && (
+      {deleteId && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDeleteId(null)}>
           <div className="modal" style={{maxWidth:'400px'}}>
             <div className="modal-header"><span className="modal-title" style={{color:'var(--danger)'}}>⚠️ تأكيد الحذف</span></div>
@@ -115,7 +117,8 @@ export function Suppliers() {
               <button className="btn btn-danger" onClick={handleDelete}>تأكيد</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

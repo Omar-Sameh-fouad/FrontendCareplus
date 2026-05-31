@@ -5,6 +5,7 @@ import { login, forgotPassword, resetPassword } from '../api';
 import { useAuth } from '../AuthContext';
 import { clientRateLimit, clearRateLimit, validators, checkPasswordStrength } from '../security';
 import { Eye, EyeOff, Lock, User, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -28,7 +29,6 @@ export default function Login() {
     e.preventDefault();
     if (!validate()) return;
 
-    // Client-side rate limit: 5 محاولات كل 15 دقيقة
     const rl = clientRateLimit('login', 5, 15 * 60 * 1000);
     if (rl.blocked) { toast.error(rl.message); return; }
 
@@ -47,7 +47,6 @@ export default function Login() {
       if (newAttempts >= 3) {
         setErrors({ password: `محاولة ${newAttempts} من 5 — تجاوز 5 سيوقف الدخول لـ 15 دقيقة` });
       }
-      // نرج password عند الخطأ أمانياً
       setForm(f => ({ ...f, password: '' }));
     } finally {
       setLoading(false);
@@ -61,14 +60,12 @@ export default function Login() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px', position: 'relative', overflow: 'hidden',
     }}>
-      {/* Decorative blobs */}
       <div style={{ position:'absolute', top:'-100px', right:'-100px', width:'380px', height:'380px', borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
       <div style={{ position:'absolute', bottom:'-80px', left:'-80px', width:'300px', height:'300px', borderRadius:'50%', background:'rgba(255,255,255,0.03)', pointerEvents:'none' }}/>
       <div style={{ position:'absolute', top:'35%', left:'8%', width:'140px', height:'140px', borderRadius:'50%', background:'rgba(245,158,11,0.07)', pointerEvents:'none' }}/>
       <div style={{ position:'absolute', top:'15%', right:'15%', width:'80px', height:'80px', borderRadius:'50%', background:'rgba(26,127,110,0.15)', pointerEvents:'none' }}/>
 
       <div className="animate-in" style={{ width:'100%', maxWidth:'440px' }}>
-        {/* Logo */}
         <div style={{ textAlign:'center', marginBottom:'30px' }}>
           <div style={{
             width:'76px', height:'76px',
@@ -82,7 +79,6 @@ export default function Login() {
           <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'13.5px', marginTop:'4px' }}>نظام إدارة الصيدلية</p>
         </div>
 
-        {/* Card */}
         <div style={{
           background:'rgba(255,255,255,0.98)',
           borderRadius:'24px', padding:'36px',
@@ -100,7 +96,6 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} autoComplete="off" noValidate>
-            {/* Username */}
             <div className="form-group">
               <label className="form-label">اسم المستخدم</label>
               <div style={{ position:'relative' }}>
@@ -119,7 +114,6 @@ export default function Login() {
               {errors.username && <div style={{ fontSize:'12px', color:'var(--danger)', marginTop:'5px' }}>{errors.username}</div>}
             </div>
 
-            {/* Password */}
             <div className="form-group">
               <label className="form-label">كلمة المرور</label>
               <div style={{ position:'relative' }}>
@@ -161,7 +155,6 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Security note */}
           <div style={{ marginTop:'20px', paddingTop:'16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', gap:'6px', justifyContent:'center' }}>
             <Lock size={12} color="var(--text-muted)"/>
             <span style={{ fontSize:'11.5px', color:'var(--text-muted)' }}>الاتصال مشفر ومحمي — CarePlus v1.0</span>
@@ -207,7 +200,7 @@ function ForgotModal({ onClose }) {
     finally { setLoading(false); }
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth:'420px' }}>
         <div className="modal-header">
@@ -256,6 +249,7 @@ function ForgotModal({ onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
@@ -162,8 +163,7 @@ export default function Medicines() {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
           <div className="modal" style={{maxWidth:'680px'}}>
             <div className="modal-header">
@@ -197,11 +197,11 @@ export default function Medicines() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Delete confirm */}
-      {deleteId && (
+      {deleteId && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDeleteId(null)}>
           <div className="modal" style={{maxWidth:'400px'}}>
             <div className="modal-header"><span className="modal-title" style={{color:'var(--danger)'}}>⚠️ تأكيد الحذف</span></div>
@@ -211,7 +211,8 @@ export default function Medicines() {
               <button className="btn btn-danger" onClick={handleDelete}>تأكيد الحذف</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

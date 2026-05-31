@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { setupSecurity, getSecurity, dailyClosing, downloadBackup, restoreBackup, resetPin, getTodayReport } from '../api';
 import { useAuth } from '../AuthContext';
 import toast from 'react-hot-toast';
@@ -11,7 +12,6 @@ import {
   clientRateLimit, clearRateLimit
 } from '../security';
 
-// ─── PIN Input Component ──────────────────────────
 function PinInput({ value, onChange, length = 6, label }) {
   const inputs = useRef([]);
 
@@ -54,7 +54,6 @@ function PinInput({ value, onChange, length = 6, label }) {
   );
 }
 
-// ─── Restore Section ──────────────────────────────
 function RestoreSection() {
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
@@ -101,7 +100,6 @@ function RestoreSection() {
       const formData = new FormData();
       formData.append('backup', file);
 
-      // محاكاة progress
       const progressInterval = setInterval(() => {
         setProgress(p => Math.min(p + 8, 85));
       }, 300);
@@ -140,7 +138,6 @@ function RestoreSection() {
           </div>
         </div>
 
-        {/* Drop Zone */}
         <div
           className={`drop-zone ${dragOver ? 'drag-over' : ''} ${file ? 'has-file' : ''}`}
           onClick={() => !file && fileRef.current?.click()}
@@ -191,8 +188,7 @@ function RestoreSection() {
         </button>
       </div>
 
-      {/* Confirm Modal */}
-      {confirmOpen && (
+      {confirmOpen && createPortal(
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setConfirmOpen(false)}>
           <div className="modal" style={{ maxWidth:'440px' }}>
             <div className="modal-header">
@@ -226,13 +222,13 @@ function RestoreSection() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
 }
 
-// ─── Backup Section ───────────────────────────────
 function BackupSection() {
   const [loading, setLoading] = useState(false);
 
@@ -280,7 +276,6 @@ function BackupSection() {
   );
 }
 
-// ─── Security Setup Section ───────────────────────
 function SecuritySection({ security, onRefresh }) {
   const [form, setForm] = useState({ pin: '', recoveryEmail: '', recoveryPhone: '' });
   const [saving, setSaving] = useState(false);
@@ -345,7 +340,6 @@ function SecuritySection({ security, onRefresh }) {
   );
 }
 
-// ─── Daily Closing Section ────────────────────────
 function DailyClosingSection() {
   const { user } = useAuth();
   const [pin, setPin] = useState('');
@@ -392,7 +386,6 @@ function DailyClosingSection() {
         <span style={{ fontSize:'12px', color:'var(--text-muted)' }}>{new Date().toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' })}</span>
       </div>
       <div className="card-body">
-        {/* Preview */}
         {loadingPreview ? (
           <div className="skeleton" style={{ height:'80px', borderRadius:'8px', marginBottom:'16px' }}/>
         ) : preview && (
@@ -419,7 +412,6 @@ function DailyClosingSection() {
   );
 }
 
-// ─── Main Settings Page ───────────────────────────
 export default function Settings() {
   const [security, setSecurity] = useState(null);
   const { isAdmin } = useAuth();

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getUsers, addUser, updateUser, deleteUser } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, Users as UsersIcon, Search } from 'lucide-react';
@@ -121,7 +122,7 @@ export default function Users() {
         </div>
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
           <div className="modal" style={{maxWidth:'600px'}}>
             <div className="modal-header">
@@ -160,10 +161,11 @@ export default function Users() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {deleteId && (
+      {deleteId && createPortal(
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setDeleteId(null)}>
           <div className="modal" style={{maxWidth:'400px'}}>
             <div className="modal-header"><span className="modal-title" style={{color:'var(--danger)'}}>⚠️ تأكيد الحذف</span></div>
@@ -173,7 +175,8 @@ export default function Users() {
               <button className="btn btn-danger" onClick={handleDelete}>تأكيد الحذف</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
