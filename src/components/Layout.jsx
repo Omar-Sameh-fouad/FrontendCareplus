@@ -119,9 +119,9 @@ export default function Layout({ children }) {
       {/* Main */}
       <main style={{
         flex: 1, marginRight: 'var(--sidebar-width)',
-        minHeight: '100vh', overflow: 'auto'
+        minHeight: '100vh'
       }}>
-        <div style={{ padding: '28px', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ padding: '28px', maxWidth: '1400px', margin: '0 auto', overflowX: 'hidden' }}>
           {children}
         </div>
       </main>
