@@ -44,13 +44,13 @@ export default function Users() {
     try { 
       const {data} = await getUsers(); 
       
-      // الحل هنا من الفرونت اند: معالجة حالة "نشط/موقوف" عشان نتفادى مشكلة الـ Buffer اللي بتيجي من الداتا بيز
+      // معالجة حالة "نشط/موقوف" لتفادي مشكلة الـ Buffer من الفرونت اند
       const cleanedData = data.map(u => {
-        let isActive = 1; // الافتراضي نشط
+        let isActive = 1;
         if (u.active && typeof u.active === 'object' && u.active.data) {
-          isActive = u.active.data[0]; // لو رجعت على هيئة Buffer
+          isActive = u.active.data[0];
         } else if (u.active === 0 || u.active === '0' || u.active === false) {
-          isActive = 0; // لو رجعت صفر صريح
+          isActive = 0;
         }
         return { ...u, active: isActive };
       });
@@ -69,7 +69,6 @@ export default function Users() {
   const openEdit = (u) => { setEditing(u); setForm({...u, password:''}); setShowModal(true); };
 
   const handleSave = async () => {
-    // === التحقق من طول كلمة المرور (6 رموز بالضبط) ===
     if (!editing && (!form.password || form.password.length !== 6)) {
       toast.error('كلمة المرور يجب أن تتكون من 6 أحرف/أرقام بالضبط');
       return;
@@ -81,11 +80,22 @@ export default function Users() {
 
     setSaving(true);
     try {
-      if (editing) { await updateUser(editing.id, form); toast.success('تم التعديل بنجاح'); }
-      else { await addUser(form); toast.success('تم إضافة الموظف بنجاح'); }
-      setShowModal(false); load();
-    } catch(err) { toast.error(err.response?.data?.error || 'خطأ'); }
-    finally { setSaving(false); }
+      if (editing) { 
+        await updateUser(editing.id, form); 
+        toast.success('تم التعديل بنجاح'); 
+      } else { 
+        // استبعاد حقل active لتجنب خطأ "active is not allowed" من الباك اند
+        const { active, ...addPayload } = form;
+        await addUser(addPayload); 
+        toast.success('تم إضافة الموظف بنجاح'); 
+      }
+      setShowModal(false); 
+      load();
+    } catch(err) { 
+      toast.error(err.response?.data?.error || 'خطأ'); 
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const handleDelete = async () => {
@@ -165,7 +175,6 @@ export default function Users() {
             </div>
             <div className="modal-body">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 20px'}}>
-                {/* خدعة لمنع المتصفح من الملء التلقائي */}
                 <input type="text" style={{ display: 'none' }} />
                 <input type="password" style={{ display: 'none' }} />
 
@@ -183,14 +192,16 @@ export default function Users() {
                 <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
               </div>
               
-              {/* حقل الحالة أصبح ظاهراً دائماً */}
-              <div className="form-group" style={{ marginTop: '10px' }}>
-                <label className="form-label">الحالة</label>
-                <select className="form-control" value={form.active} onChange={e=>setForm({...form,active:parseInt(e.target.value)})}>
-                  <option value={1}>نشط</option>
-                  <option value={0}>موقوف</option>
-                </select>
-              </div>
+              {/* إظهار الحالة وقت التعديل فقط لأن الباك اند بيرفضها وقت الإضافة */}
+              {editing && (
+                <div className="form-group" style={{ marginTop: '10px' }}>
+                  <label className="form-label">الحالة</label>
+                  <select className="form-control" value={form.active} onChange={e=>setForm({...form,active:parseInt(e.target.value)})}>
+                    <option value={1}>نشط</option>
+                    <option value={0}>موقوف</option>
+                  </select>
+                </div>
+              )}
 
             </div>
             <div className="modal-footer">
