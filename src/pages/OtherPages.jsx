@@ -272,7 +272,7 @@ export function Reports() {
               <LineChart data={data.history} margin={{top:5,right:5,left:0,bottom:5}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f3"/>
                 <XAxis dataKey="date" tick={{fontSize:12,fontFamily:'Cairo'}} tickFormatter={d=>new Date(d).toLocaleDateString('ar-EG',{month:'short',day:'numeric'})}/>
-                <YAxis tick={{fontSize:12,fontFamily:'Cairo'}}/>
+                <YAxis tick={{fontSize:12,fontFamily:'Cairo'}} width={55} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(1)}k`:v}/>
                 <Tooltip contentStyle={{fontFamily:'Cairo',borderRadius:'8px'}} formatter={(v,n)=>[`${Number(v).toFixed(2)} ج`,n==='total'?'المبيعات':'الربح']}/>
                 <Line type="monotone" dataKey="total" stroke="var(--primary)" strokeWidth={2.5} dot={{r:4}} name="المبيعات"/>
                 <Line type="monotone" dataKey="profit" stroke="var(--success)" strokeWidth={2.5} dot={{r:4}} name="الربح"/>
