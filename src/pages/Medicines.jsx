@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { getMedicines, addMedicine, updateMedicine, deleteMedicine, getSuppliers, analyzeMedicineImage } from '../api';
 import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, Package, Camera, ImagePlus, X as XIcon, Send, AlertCircle } from 'lucide-react';
-import imageCompression from 'browser-image-compression'; // 👈 استدعاء مكتبة الضغط
+import imageCompression from 'browser-image-compression'; 
 
 const emptyForm = {
   name:'', barcode:'', expiryDate:'', quantity:0, purchasePrice:0,
@@ -11,15 +11,23 @@ const emptyForm = {
   pillCount:0, stripCount:0, manufacturer:'', genericName:'', medicineForm:''
 };
 
-// تم استخراج المكون لحل مشكلة فقدان الـ Focus أثناء كتابة الأدوية
+// تم التعديل هنا: منع إدخال الحروف وإلغاء أسهم الأرقام
 const F = ({ label, name, type='text', form, setForm, ...rest }) => {
   const handleChange = (e) => {
     if (type === 'checkbox') {
       setForm({ ...form, [name]: e.target.checked });
-    } else {
+    } else if (type === 'number') {
       let val = e.target.value;
-      if (type === 'number') val = parseFloat(val) || 0;
+      // السماح بالأرقام والنقطة العشرية فقط
+      val = val.replace(/[^0-9.]/g, ''); 
+      // منع كتابة أكثر من نقطة عشرية (مثال: 15.5.5 غير مسموح)
+      const parts = val.split('.');
+      if (parts.length > 2) {
+        val = parts[0] + '.' + parts.slice(1).join('');
+      }
       setForm({ ...form, [name]: val });
+    } else {
+      setForm({ ...form, [name]: e.target.value });
     }
   };
 
@@ -36,7 +44,16 @@ const F = ({ label, name, type='text', form, setForm, ...rest }) => {
           <span style={{fontSize:'14px'}}>{rest.checkLabel}</span>
         </label>
       ) : (
-        <input className="form-control" type={type} value={form[name]} onChange={handleChange} {...rest} />
+        <input 
+          className="form-control" 
+          // تحويل الـ type لـ text دائماً في الـ HTML لإخفاء الأسهم
+          type={type === 'number' ? 'text' : type} 
+          // فتح كيبورد الأرقام في الموبايل
+          inputMode={type === 'number' ? 'decimal' : undefined}
+          value={form[name]} 
+          onChange={handleChange} 
+          {...rest} 
+        />
       )}
     </div>
   );
@@ -54,9 +71,8 @@ export default function Medicines() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   
-  // حالة الرفع والتحليل بالذكاء الاصطناعي
   const [analyzing, setAnalyzing] = useState(false);
-  const [compressing, setCompressing] = useState(false); // 👈 حالة الضغط الجديدة
+  const [compressing, setCompressing] = useState(false); 
   const [selectedImages, setSelectedImages] = useState([]);
 
   const load = useCallback(async (page=1) => {
@@ -80,8 +96,18 @@ export default function Medicines() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (editing) { await updateMedicine(editing.id, form); toast.success('تم التعديل بنجاح'); }
-      else { await addMedicine(form); toast.success('تم الإضافة بنجاح'); }
+      // تحويل القيم النصية لأرقام فعلية قبل إرسالها للـ API
+      const payload = {
+        ...form,
+        quantity: form.quantity ? Number(form.quantity) : 0,
+        purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : 0,
+        sellingPrice: form.sellingPrice ? Number(form.sellingPrice) : 0,
+        pillCount: form.pillCount ? Number(form.pillCount) : 0,
+        stripCount: form.stripCount ? Number(form.stripCount) : 0,
+      };
+
+      if (editing) { await updateMedicine(editing.id, payload); toast.success('تم التعديل بنجاح'); }
+      else { await addMedicine(payload); toast.success('تم الإضافة بنجاح'); }
       setShowModal(false);
       load(pagination.page);
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ'); }
@@ -97,7 +123,6 @@ export default function Medicines() {
     } catch(err) { toast.error(err.response?.data?.error || 'خطأ في الحذف'); }
   };
 
-  // 👈 دالة إضافة الصور معدلة بالضغط
   const handleAddImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -106,9 +131,9 @@ export default function Medicines() {
     const toastId = toast.loading('جاري ضغط وتجهيز الصور... ⏳');
 
     const options = {
-      maxSizeMB: 1,             // أقصى حجم للصورة 1 ميجا
-      maxWidthOrHeight: 1920,   // أقصى أبعاد عشان نحافظ على الجودة
-      useWebWorker: true        // عشان المتصفح مايهنجش
+      maxSizeMB: 1,             
+      maxWidthOrHeight: 1920,   
+      useWebWorker: true        
     };
 
     try {
@@ -138,7 +163,7 @@ export default function Medicines() {
       toast.error('حصلت مشكلة أثناء تجهيز الصور', { id: toastId });
     } finally {
       setCompressing(false);
-      e.target.value = ''; // تفريغ الـ input
+      e.target.value = ''; 
     }
   };
 
@@ -283,7 +308,6 @@ export default function Medicines() {
                   </p>
                 </div>
 
-                {/* 👈 تعديل أزرار الرفع لتعطيلها أثناء الضغط */}
                 <div style={{ display:'flex', gap:'8px', marginBottom: selectedImages.length > 0 ? '12px' : '0' }}>
                   <label style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', padding:'9px', borderRadius:'8px', border:'1.5px dashed var(--primary)', background:'rgba(26,127,110,0.05)', cursor: (analyzing || compressing) ? 'not-allowed' : 'pointer', fontSize:'13px', fontWeight:'600', color:'var(--primary)' }}>
                     <input type="file" accept="image/*" capture="environment" multiple onChange={handleAddImages} style={{ display:'none' }} disabled={analyzing || compressing} />
@@ -333,9 +357,11 @@ export default function Medicines() {
                 <F label="الشكل الدوائي" name="medicineForm" placeholder="أقراص / كبسول / شراب..." form={form} setForm={setForm} />
                 <F label="الشركة المصنعة" name="manufacturer" placeholder="اسم الشركة" form={form} setForm={setForm} />
                 <F label="تاريخ الانتهاء *" name="expiryDate" type="date" form={form} setForm={setForm} />
+                {/* الحقول الرقمية دلوقتي بقت محمية من החروف وبدون أسهم المزعجة */}
                 <F label="الكمية *" name="quantity" type="number" min="0" form={form} setForm={setForm} />
                 <F label="سعر الشراء *" name="purchasePrice" type="number" min="0" step="0.01" form={form} setForm={setForm} />
                 <F label="سعر البيع *" name="sellingPrice" type="number" min="0" step="0.01" form={form} setForm={setForm} />
+                
                 <F label="المورد" name="supplierId" type="select" form={form} setForm={setForm}>
                   <option value="">-- بدون مورد --</option>
                   {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}

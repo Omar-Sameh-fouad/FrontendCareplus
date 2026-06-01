@@ -11,8 +11,27 @@ const roleBadge = { admin:'badge-danger', pharmacist:'badge-info', cashier:'badg
 const F = ({ label, name, type='text', form, setForm, ...rest }) => {
   const handleChange = (e) => {
     let val = e.target.value;
-    if (type === 'number') val = parseInt(val) || 0;
-    setForm({ ...form, [name]: val });
+
+    // فلترة الأرقام والكسور فقط لأي حقل كان نوعه number
+    if (type === 'number') {
+      // السماح بالأرقام والنقطة العشرية فقط
+      val = val.replace(/[^0-9.]/g, ''); 
+      // منع كتابة أكثر من نقطة عشرية واحدة (مثلاً 15.5.5 مرفوضة)
+      const parts = val.split('.');
+      if (parts.length > 2) {
+        val = parts[0] + '.' + parts.slice(1).join('');
+      }
+      setForm({ ...form, [name]: val });
+    } 
+    // فلترة إضافية لرقم التليفون (أرقام صحيحة فقط بدون كسور)
+    else if (name === 'phone') {
+      val = val.replace(/[^0-9]/g, '');
+      setForm({ ...form, [name]: val });
+    } 
+    // باقي الحقول العادية (نصوص)
+    else {
+      setForm({ ...form, [name]: val });
+    }
   };
 
   return (
@@ -23,7 +42,16 @@ const F = ({ label, name, type='text', form, setForm, ...rest }) => {
           {rest.children}
         </select>
       ) : (
-        <input className="form-control" type={type} value={form[name]} onChange={handleChange} {...rest} />
+        <input 
+          className="form-control" 
+          // تحويل الـ type لـ text دائماً في الـ HTML لإخفاء الأسهم المزعجة
+          type={type === 'number' ? 'text' : type} 
+          // تفعيل لوحة الأرقام في الموبايل
+          inputMode={type === 'number' || name === 'phone' ? 'decimal' : undefined}
+          value={form[name]} 
+          onChange={handleChange} 
+          {...rest} 
+        />
       )}
     </div>
   );
@@ -39,7 +67,6 @@ export default function Users() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   
-  // حالة لإظهار وإخفاء الباسوورد (علامة العين)
   const [showPassword, setShowPassword] = useState(false);
 
   // الـ Regex الخاص بالباك إند
@@ -49,7 +76,6 @@ export default function Users() {
     setLoading(true);
     try { 
       const {data} = await getUsers(); 
-      
       const cleanedData = data.map(u => {
         let isActive = 1;
         if (u.active && typeof u.active === 'object' && u.active.data) {
@@ -59,7 +85,6 @@ export default function Users() {
         }
         return { ...u, active: isActive };
       });
-
       setUsers(cleanedData); 
     } catch { 
       toast.error('فشل تحميل الموظفين'); 
@@ -73,13 +98,13 @@ export default function Users() {
   const openAdd = () => { 
     setEditing(null); 
     setForm(emptyForm); 
-    setShowPassword(false); // إخفاء الباسوورد افتراضياً عند فتح المودال
+    setShowPassword(false); 
     setShowModal(true); 
   };
   const openEdit = (u) => { 
     setEditing(u); 
     setForm({...u, password:''}); 
-    setShowPassword(false); // إخفاء الباسوورد افتراضياً عند فتح المودال
+    setShowPassword(false); 
     setShowModal(true); 
   };
 
@@ -95,12 +120,19 @@ export default function Users() {
 
     setSaving(true);
     try {
+      // تحويل القيم النصية التي تحتوي على أرقام إلى أرقام فعلية للباك إند
+      const payload = {
+        ...form,
+        dailyHours: form.dailyHours ? Number(form.dailyHours) : 8,
+        expectedDays: form.expectedDays ? Number(form.expectedDays) : 24
+      };
+
       if (editing) {
-        const { id, ...updatePayload } = form;
+        const { id, ...updatePayload } = payload;
         await updateUser(editing.id, updatePayload);
         toast.success('تم التعديل بنجاح');
       } else { 
-        const { active, ...addPayload } = form;
+        const { active, ...addPayload } = payload;
         await addUser(addPayload); 
         toast.success('تم إضافة الموظف بنجاح'); 
       }
@@ -204,16 +236,15 @@ export default function Users() {
                 <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل" form={form} setForm={setForm} autoComplete="off" />
                 <F label="اسم المستخدم *" name="username" placeholder="username" form={form} setForm={setForm} autoComplete="off" />
                 <F label="البريد الإلكتروني *" name="email" type="email" placeholder="example@gmail.com" form={form} setForm={setForm} autoComplete="off" />
-                <F label="رقم الهاتف *" name="phone" placeholder="01xxxxxxxxx (11 رقم)" form={form} setForm={setForm} autoComplete="off" />
+                <F label="رقم الهاتف *" name="phone" placeholder="01xxxxxxxxx (11 رقم)" form={form} setForm={setForm} maxLength={11} autoComplete="off" />
                 <F label="الدور *" name="role" type="select" form={form} setForm={setForm}>
                   <option value="cashier">كاشير</option>
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
                 
-                <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} autoComplete="off" />
+                <F label="ساعات العمل اليومية" name="dailyHours" type="number" form={form} setForm={setForm} autoComplete="off" />
                 
-                {/* حقل كلمة المرور مع علامة العين وتحديد الحد الأقصى */}
                 <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                   <label className="form-label">{editing ? 'كلمة مرور جديدة (اتركها فارغة إذا لم ترد التغيير)' : 'كلمة المرور *'}</label>
                   
@@ -224,12 +255,11 @@ export default function Users() {
                       placeholder="أدخل كلمة المرور (8 رموز فقط)..."
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      maxLength={8} // التعديل هنا: قفل الباسوورد على 8 رموز كحد أقصى
+                      maxLength={8} 
                       autoComplete="new-password"
-                      style={{ paddingLeft: '40px' }} // مسافة عشان أيقونة العين متغطيش على الكلام
+                      style={{ paddingLeft: '40px' }} 
                     />
                     
-                    {/* زرار علامة العين */}
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -271,7 +301,7 @@ export default function Users() {
                   )}
                 </div>
 
-                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
+                <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" form={form} setForm={setForm} autoComplete="off" />
               </div>
               
               {editing && (
