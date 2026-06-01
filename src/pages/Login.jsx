@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { login, forgotPassword, resetPassword } from '../api';
 import { useAuth } from '../AuthContext';
-import { clientRateLimit, clearRateLimit, validators, checkPasswordStrength } from '../security';
-import { Eye, EyeOff, Lock, User, AlertTriangle } from 'lucide-react';
+import { clientRateLimit, clearRateLimit, validators } from '../security';
+import { Eye, EyeOff, Lock, User, AlertTriangle, CheckCircle, Circle } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 export default function Login() {
@@ -174,7 +174,18 @@ function ForgotModal({ onClose }) {
   const [newPass, setNewPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const strength = checkPasswordStrength(newPass);
+
+  // تعبير نمطي للتحقق من الشروط
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/;
+
+  const reqs = {
+    length: newPass.length === 8, // 8 رموز بالضبط
+    upper: /[A-Z]/.test(newPass),
+    lower: /[a-z]/.test(newPass),
+    numSpec: /(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-])/.test(newPass)
+  };
+
+  const isPasswordValid = passwordRegex.test(newPass) && newPass.length === 8;
 
   const sendOtp = async () => {
     if (!email.trim()) { toast.error('أدخل البريد الإلكتروني'); return; }
@@ -189,7 +200,8 @@ function ForgotModal({ onClose }) {
 
   const doReset = async () => {
     if (!otp.trim() || otp.length < 4) { toast.error('أدخل رمز التحقق'); return; }
-    if (newPass.length < 6) { toast.error('كلمة المرور يجب أن تكون 6 أحرف+'); return; }
+    if (!isPasswordValid) { toast.error('كلمة المرور لا تستوفي جميع الشروط المطلوبة'); return; }
+    
     setLoading(true);
     try {
       await resetPassword({ email: email.trim(), otp: otp.trim(), newPassword: newPass });
@@ -225,17 +237,36 @@ function ForgotModal({ onClose }) {
               <div className="form-group">
                 <label className="form-label">كلمة المرور الجديدة</label>
                 <div style={{ position:'relative' }}>
-                  <input className="form-control" type={showPass ? 'text' : 'password'} placeholder="6 أحرف على الأقل" value={newPass} onChange={e => setNewPass(e.target.value)} style={{ paddingLeft:'40px' }} maxLength={128} autoComplete="new-password" />
+                  <input 
+                    className="form-control" 
+                    type={showPass ? 'text' : 'password'} 
+                    placeholder="أدخل كلمة المرور (8 رموز فقط)..." 
+                    value={newPass} 
+                    onChange={e => setNewPass(e.target.value)} 
+                    style={{ paddingLeft:'40px' }} 
+                    maxLength={8} // تم قفلها على 8 رموز كحد أقصى
+                    autoComplete="new-password" 
+                  />
                   <button type="button" onClick={() => setShowPass(!showPass)} style={{ position:'absolute', left:'10px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)' }}>
                     {showPass ? <EyeOff size={15}/> : <Eye size={15}/>}
                   </button>
                 </div>
-                {newPass && (
-                  <div style={{ marginTop:'8px' }}>
-                    <div className="progress-bar">
-                      <div className="progress-bar-fill" style={{ width:`${(strength.score/5)*100}%`, background:strength.color }}/>
+                
+                {/* قائمة التحقق الشبيهة بـ Users */}
+                {newPass.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: reqs.length ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                      {reqs.length ? <CheckCircle size={13} /> : <Circle size={13} />} 8 أحرف بالضبط
                     </div>
-                    <div style={{ fontSize:'12px', color:strength.color, marginTop:'4px', fontWeight:'600' }}>{strength.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: reqs.upper ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                      {reqs.upper ? <CheckCircle size={13} /> : <Circle size={13} />} حرف إنجليزي كبير
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: reqs.lower ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                      {reqs.lower ? <CheckCircle size={13} /> : <Circle size={13} />} حرف إنجليزي صغير
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: reqs.numSpec ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                      {reqs.numSpec ? <CheckCircle size={13} /> : <Circle size={13} />} رقم ورمز خاص
+                    </div>
                   </div>
                 )}
               </div>
@@ -244,7 +275,7 @@ function ForgotModal({ onClose }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>إلغاء</button>
-          <button className="btn btn-primary" disabled={loading} onClick={step === 1 ? sendOtp : doReset}>
+          <button className="btn btn-primary" disabled={loading || (step === 2 && !isPasswordValid)} onClick={step === 1 ? sendOtp : doReset}>
             {loading ? <span className="spinner"/> : step === 1 ? 'إرسال الرمز' : 'تغيير كلمة المرور'}
           </button>
         </div>
