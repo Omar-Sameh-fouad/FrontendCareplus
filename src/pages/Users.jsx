@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getUsers, addUser, updateUser, deleteUser } from '../api';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Users as UsersIcon, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Search, CheckCircle, Circle } from 'lucide-react';
 
 const emptyForm = { username:'', fullName:'', email:'', phone:'', role:'cashier', password:'', dailyHours:8, expectedDays:24, active:1 };
 const roles = { admin:'مدير', pharmacist:'صيدلي', cashier:'كاشير' };
@@ -39,6 +39,9 @@ export default function Users() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
 
+  // الـ Regex الخاص بالباك إند
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/;
+
   const load = async () => {
     setLoading(true);
     try { 
@@ -68,19 +71,20 @@ export default function Users() {
   const openEdit = (u) => { setEditing(u); setForm({...u, password:''}); setShowModal(true); };
 
   const handleSave = async () => {
-    if (!editing && (!form.password || form.password.length !== 6)) {
-      toast.error('كلمة المرور يجب أن تتكون من 6 أحرف/أرقام بالضبط');
+    // التحقق من الباسوورد بناءً على الشروط الجديدة
+    if (!editing && !passwordRegex.test(form.password)) {
+      toast.error('كلمة المرور لا تستوفي جميع الشروط المطلوبة');
       return;
     }
-    if (editing && form.password && form.password.length !== 6) {
-      toast.error('كلمة المرور الجديدة يجب أن تتكون من 6 أحرف/أرقام بالضبط');
+    if (editing && form.password && !passwordRegex.test(form.password)) {
+      toast.error('كلمة المرور الجديدة لا تستوفي جميع الشروط المطلوبة');
       return;
     }
 
     setSaving(true);
     try {
       if (editing) {
-        const { id, ...updatePayload } = form; // ✅ شيل الـ id من الـ body
+        const { id, ...updatePayload } = form;
         await updateUser(editing.id, updatePayload);
         toast.success('تم التعديل بنجاح');
       } else { 
@@ -106,6 +110,15 @@ export default function Users() {
     u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
     u.username?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // حساب الشروط لحظياً للتفاعل مع الـ UI
+  const pwd = form.password || '';
+  const reqs = {
+    length: pwd.length >= 8,
+    upper: /[A-Z]/.test(pwd),
+    lower: /[a-z]/.test(pwd),
+    numSpec: /(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-])/.test(pwd)
+  };
 
   return (
     <div className="animate-in">
@@ -179,15 +192,47 @@ export default function Users() {
 
                 <F label="الاسم الكامل *" name="fullName" placeholder="الاسم بالكامل" form={form} setForm={setForm} autoComplete="off" />
                 <F label="اسم المستخدم *" name="username" placeholder="username" form={form} setForm={setForm} autoComplete="off" />
-                <F label="البريد الإلكتروني" name="email" type="email" placeholder="email@example.com" form={form} setForm={setForm} autoComplete="off" />
-                <F label="رقم الهاتف" name="phone" placeholder="01xxxxxxxxx" form={form} setForm={setForm} autoComplete="off" />
+                <F label="البريد الإلكتروني *" name="email" type="email" placeholder="example@gmail.com" form={form} setForm={setForm} autoComplete="off" />
+                <F label="رقم الهاتف *" name="phone" placeholder="01xxxxxxxxx (11 رقم)" form={form} setForm={setForm} autoComplete="off" />
                 <F label="الدور *" name="role" type="select" form={form} setForm={setForm}>
                   <option value="cashier">كاشير</option>
                   <option value="pharmacist">صيدلي</option>
                   <option value="admin">مدير</option>
                 </F>
-                <F label={editing?'كلمة مرور جديدة (للتغيير فقط)':'كلمة المرور *'} name="password" type="password" placeholder="6 أحرف أو أرقام فقط" form={form} setForm={setForm} maxLength={6} minLength={6} autoComplete="new-password" />
+                
                 <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} autoComplete="off" />
+                
+                {/* حقل كلمة المرور الجديد مع الـ Checklist */}
+                <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                  <label className="form-label">{editing ? 'كلمة مرور جديدة (اتركها فارغة إذا لم ترد التغيير)' : 'كلمة المرور *'}</label>
+                  <input
+                    className="form-control"
+                    type="password"
+                    placeholder="أدخل كلمة المرور..."
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    autoComplete="new-password"
+                  />
+                  
+                  {/* إظهار الـ Checklist لو بنضيف مستخدم جديد، أو لو بنعدل والمستخدم بدأ يكتب في الباسوورد */}
+                  {(!editing || form.password.length > 0) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.length ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                        {reqs.length ? <CheckCircle size={14} /> : <Circle size={14} />} 8 أحرف على الأقل
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.upper ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                        {reqs.upper ? <CheckCircle size={14} /> : <Circle size={14} />} حرف إنجليزي كبير
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.lower ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                        {reqs.lower ? <CheckCircle size={14} /> : <Circle size={14} />} حرف إنجليزي صغير
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.numSpec ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
+                        {reqs.numSpec ? <CheckCircle size={14} /> : <Circle size={14} />} رقم ورمز خاص (!@#$)
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
               </div>
               
@@ -203,7 +248,7 @@ export default function Users() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
-              <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
+              <button className="btn btn-primary" disabled={saving || (!editing && !passwordRegex.test(form.password)) || (editing && form.password && !passwordRegex.test(form.password))} onClick={handleSave}>
                 {saving?<span className="spinner"/>:(editing?'حفظ التعديلات':'إضافة الموظف')}
               </button>
             </div>
