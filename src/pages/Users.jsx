@@ -44,7 +44,6 @@ export default function Users() {
     try { 
       const {data} = await getUsers(); 
       
-      // معالجة حالة "نشط/موقوف" لتفادي مشكلة الـ Buffer من الفرونت اند
       const cleanedData = data.map(u => {
         let isActive = 1;
         if (u.active && typeof u.active === 'object' && u.active.data) {
@@ -80,11 +79,11 @@ export default function Users() {
 
     setSaving(true);
     try {
-      if (editing) { 
-        await updateUser(editing.id, form); 
-        toast.success('تم التعديل بنجاح'); 
+      if (editing) {
+        const { id, ...updatePayload } = form; // ✅ شيل الـ id من الـ body
+        await updateUser(editing.id, updatePayload);
+        toast.success('تم التعديل بنجاح');
       } else { 
-        // استبعاد حقل active لتجنب خطأ "active is not allowed" من الباك اند
         const { active, ...addPayload } = form;
         await addUser(addPayload); 
         toast.success('تم إضافة الموظف بنجاح'); 
@@ -192,7 +191,6 @@ export default function Users() {
                 <F label="الأيام المتوقعة شهرياً" name="expectedDays" type="number" min="1" max="31" form={form} setForm={setForm} autoComplete="off" />
               </div>
               
-              {/* إظهار الحالة وقت التعديل فقط لأن الباك اند بيرفضها وقت الإضافة */}
               {editing && (
                 <div className="form-group" style={{ marginTop: '10px' }}>
                   <label className="form-label">الحالة</label>
@@ -202,7 +200,6 @@ export default function Users() {
                   </select>
                 </div>
               )}
-
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>إلغاء</button>
