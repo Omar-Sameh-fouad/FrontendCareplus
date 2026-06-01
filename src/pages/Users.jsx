@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getUsers, addUser, updateUser, deleteUser } from '../api';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Users as UsersIcon, Search, CheckCircle, Circle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Search, CheckCircle, Circle, Eye, EyeOff } from 'lucide-react';
 
 const emptyForm = { username:'', fullName:'', email:'', phone:'', role:'cashier', password:'', dailyHours:8, expectedDays:24, active:1 };
 const roles = { admin:'مدير', pharmacist:'صيدلي', cashier:'كاشير' };
@@ -38,6 +38,9 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+  
+  // حالة لإظهار وإخفاء الباسوورد (علامة العين)
+  const [showPassword, setShowPassword] = useState(false);
 
   // الـ Regex الخاص بالباك إند
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/;
@@ -67,11 +70,20 @@ export default function Users() {
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
-  const openEdit = (u) => { setEditing(u); setForm({...u, password:''}); setShowModal(true); };
+  const openAdd = () => { 
+    setEditing(null); 
+    setForm(emptyForm); 
+    setShowPassword(false); // إخفاء الباسوورد افتراضياً عند فتح المودال
+    setShowModal(true); 
+  };
+  const openEdit = (u) => { 
+    setEditing(u); 
+    setForm({...u, password:''}); 
+    setShowPassword(false); // إخفاء الباسوورد افتراضياً عند فتح المودال
+    setShowModal(true); 
+  };
 
   const handleSave = async () => {
-    // التحقق من الباسوورد بناءً على الشروط الجديدة
     if (!editing && !passwordRegex.test(form.password)) {
       toast.error('كلمة المرور لا تستوفي جميع الشروط المطلوبة');
       return;
@@ -111,7 +123,6 @@ export default function Users() {
     u.username?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // حساب الشروط لحظياً للتفاعل مع الـ UI
   const pwd = form.password || '';
   const reqs = {
     length: pwd.length >= 8,
@@ -202,23 +213,50 @@ export default function Users() {
                 
                 <F label="ساعات العمل اليومية" name="dailyHours" type="number" min="1" max="24" form={form} setForm={setForm} autoComplete="off" />
                 
-                {/* حقل كلمة المرور الجديد مع الـ Checklist */}
+                {/* حقل كلمة المرور مع علامة العين وتحديد الحد الأقصى */}
                 <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
                   <label className="form-label">{editing ? 'كلمة مرور جديدة (اتركها فارغة إذا لم ترد التغيير)' : 'كلمة المرور *'}</label>
-                  <input
-                    className="form-control"
-                    type="password"
-                    placeholder="أدخل كلمة المرور..."
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    autoComplete="new-password"
-                  />
                   
-                  {/* إظهار الـ Checklist لو بنضيف مستخدم جديد، أو لو بنعدل والمستخدم بدأ يكتب في الباسوورد */}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      className="form-control"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="أدخل كلمة المرور (8 رموز فقط)..."
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      maxLength={8} // التعديل هنا: قفل الباسوورد على 8 رموز كحد أقصى
+                      autoComplete="new-password"
+                      style={{ paddingLeft: '40px' }} // مسافة عشان أيقونة العين متغطيش على الكلام
+                    />
+                    
+                    {/* زرار علامة العين */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        left: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px'
+                      }}
+                      title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  
                   {(!editing || form.password.length > 0) && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.length ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
-                        {reqs.length ? <CheckCircle size={14} /> : <Circle size={14} />} 8 أحرف على الأقل
+                        {reqs.length ? <CheckCircle size={14} /> : <Circle size={14} />} 8 أحرف بالضبط
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: reqs.upper ? '#16a34a' : '#64748b', transition: 'color 0.2s' }}>
                         {reqs.upper ? <CheckCircle size={14} /> : <Circle size={14} />} حرف إنجليزي كبير
