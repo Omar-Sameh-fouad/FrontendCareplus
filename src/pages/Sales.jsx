@@ -458,7 +458,7 @@ const PRINT_STYLES = `
   }
 `;
 
-function buildReceiptHTML(data) {
+function buildReceiptHTML(data, isReprint = false) {
   const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة الكترونية', insurance:'تأمين' };
   const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
   const calcItemTotal = (item) => {
@@ -484,6 +484,7 @@ function buildReceiptHTML(data) {
       <div class="r-store-name">الصيدلية</div>
       <div class="r-store-sub">فاتورة مبيعات</div>
     </div>
+    ${isReprint ? `<div style="text-align:center;font-size:11px;font-weight:700;color:#856404;background:#fff3cd;border:1px dashed #ffc107;border-radius:4px;padding:4px 8px;margin-bottom:8px;">⚠ إعادة طباعة</div>` : ''}
     ${data.id ? `<div class="r-invoice-no">رقم الفاتورة: ${data.id.slice(0,8).toUpperCase()}</div>` : ''}
     <div class="r-meta">
       <div class="r-meta-row"><span>التاريخ</span><span>${new Date(data.ts).toLocaleDateString('ar-EG')}</span></div>
@@ -515,7 +516,7 @@ function buildReceiptHTML(data) {
   `;
 }
 
-function ReceiptModal({ data, onClose, successMode = false }) {
+function ReceiptModal({ data, onClose, successMode = false, isReprint = false }) {
   const payLabel = { cash:'نقدي', card:'كارت', wallet:'محفظة الكترونية', insurance:'تأمين' };
   const typeLabel = { box:'علبة', strip:'شريط', pill:'قرص' };
 
@@ -528,7 +529,7 @@ function ReceiptModal({ data, onClose, successMode = false }) {
 
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=420,height=700');
-    win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"/><title>فاتورة</title><style>${PRINT_STYLES}</style></head><body>${buildReceiptHTML(data)}</body></html>`);
+    win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"/><title>فاتورة</title><style>${PRINT_STYLES}</style></head><body>${buildReceiptHTML(data, isReprint)}</body></html>`);
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 400);
@@ -547,14 +548,26 @@ function ReceiptModal({ data, onClose, successMode = false }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{fontWeight:'800', fontSize:'16px', color: successMode ? 'var(--success)' : 'var(--text-primary)'}}>
-              {successMode ? 'تم البيع بنجاح' : 'فاتورة المبيعات'}
+            <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+              <div style={{fontWeight:'800', fontSize:'16px', color: successMode ? 'var(--success)' : 'var(--text-primary)'}}>
+                {successMode ? 'تم البيع بنجاح' : 'فاتورة المبيعات'}
+              </div>
+              {isReprint && (
+                <span style={{
+                  background:'#fff3cd', color:'#856404', border:'1px solid #ffc107',
+                  borderRadius:'6px', fontSize:'10px', fontWeight:'700', padding:'2px 8px'
+                }}>إعادة طباعة</span>
+              )}
             </div>
             {data.id && (
               <div style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'2px', fontFamily:'monospace', letterSpacing:'0.5px'}}>
                 # {data.id.slice(0,8).toUpperCase()}
               </div>
             )}
+            <div style={{display:'flex', gap:'12px', marginTop:'4px', fontSize:'11px', color:'var(--text-muted)'}}>
+              {data.cashierName && <span>👤 {data.cashierName}</span>}
+              {data.ts && <span>🕐 {new Date(data.ts).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</span>}
+            </div>
           </div>
           <button onClick={onClose} style={{
             background:'var(--bg)', border:'1px solid var(--border)', color:'var(--text-muted)',
@@ -676,6 +689,7 @@ function SaleHistory() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [date, setDate] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [printReceipt, setPrintReceipt] = useState(null);
 
@@ -686,6 +700,7 @@ function SaleHistory() {
       const params = { page: p, limit: 20 };
       
       if (date) params.date = date;
+      if (nameQuery.trim()) params.medicineName = nameQuery.trim();
       const { data } = await getSales(params);
       setSales(data.data);
       setPagination(data.pagination);
@@ -724,9 +739,21 @@ function SaleHistory() {
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
         <span className="card-title">سجل مبيعاتي</span>
         <div style={{ display: 'flex', gap: '10px', marginRight: 'auto', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={14} style={{ position: 'absolute', right: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="بحث باسم الدواء..."
+              style={{ width: '180px', paddingRight: '32px' }}
+              value={nameQuery}
+              onChange={e => setNameQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && load(1)}
+            />
+          </div>
           <input type="date" className="form-control" style={{ width: '180px' }} value={date} onChange={e => setDate(e.target.value)} />
           <button className="btn btn-primary btn-sm" onClick={() => load(1)}><Search size={14} />بحث</button>
-          {date && <button className="btn btn-ghost btn-sm" onClick={() => { setDate(''); load(1); }}>الغاء الفلتر</button>}
+          {(date || nameQuery) && <button className="btn btn-ghost btn-sm" onClick={() => { setDate(''); setNameQuery(''); setTimeout(() => load(1), 0); }}>الغاء الفلتر</button>}
         </div>
       </div>
       <div className="table-wrapper">
@@ -778,7 +805,7 @@ function SaleHistory() {
       )}
 
       {printReceipt && createPortal(
-        <ReceiptModal data={printReceipt} onClose={() => setPrintReceipt(null)} />,
+        <ReceiptModal data={printReceipt} onClose={() => setPrintReceipt(null)} isReprint={true} />,
         document.body
       )}
     </div>
