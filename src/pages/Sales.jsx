@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { searchMedicine, searchMedicineByName, createSale, getSales } from '../api';
+import { searchMedicine, searchMedicineByName, createSale, getSales, getSaleById } from '../api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, ShoppingCart, History, AlertTriangle, Printer } from 'lucide-react';
 import { useAuth } from '../AuthContext'; // ✅ استدعاء معلومات اليوزر
@@ -714,24 +714,29 @@ function SaleHistory() {
   const payLabel = { cash: 'نقدي', card: 'كارت', wallet: 'محفظة', insurance: 'تأمين' };
   const payColor = { cash: 'badge-success', card: 'badge-info', wallet: 'badge-warning', insurance: 'badge-gray' };
 
-  const openPrint = (s) => {
-    setPrintReceipt({
-      id: s.id,
-      total: s.total,
-      profit: s.profit,
-      paymentMethod: s.paymentMethod,
-      cashierName: s.cashierName,
-      ts: s.ts,
-      items: (s.items || []).map(i => ({
-        name: i.medicineName || i.name || '—',
-        genericName: i.genericName || '',
-        qty: i.qty,
-        quantityType: i.quantityType || 'box',
-        sellingPrice: i.sellingPrice || i.unitPrice || 0,
-        stripCount: i.stripCount,
-        pillCount: i.pillCount,
-      })),
-    });
+  const openPrint = async (s) => {
+    try {
+      const { data } = await getSaleById(s.id);
+      setPrintReceipt({
+        id: data.id,
+        total: data.total,
+        profit: data.profit,
+        paymentMethod: data.paymentMethod,
+        cashierName: data.cashierName,
+        ts: data.ts,
+        items: (data.items || []).map(i => ({
+          name: i.medicineName || '—',
+          genericName: i.genericName || '',
+          qty: i.qty,
+          quantityType: i.quantityType || 'box',
+          sellingPrice: i.unitPrice || 0,
+          stripCount: i.stripCount,
+          pillCount: i.pillCount,
+        })),
+      });
+    } catch {
+      toast.error('فشل تحميل تفاصيل الفاتورة');
+    }
   };
 
   return (
